@@ -1,0 +1,42 @@
+{
+  "expo": {
+    "name": "Family Expenses",
+    "slug": "family-expenses",
+    "scheme": "familyexpenses",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "ios": {
+      "bundleIdentifier": "com.venkatesh.familyexpenses",
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.venkatesh.familyexpenses",
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": true
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-sqlite",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Family Expenses to choose a receipt image for on-device scanning.",
+          "cameraPermission": "Allow Family Expenses to take a receipt photo for on-device scanning.",
+          "microphonePermission": false
+        }
+      ],
+      "expo-sharing",
+      "@react-native-community/datetimepicker"
+    ]
+  }
+}
