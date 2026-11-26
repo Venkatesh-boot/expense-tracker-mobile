@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { buildDonutSegments } from '../dashboardUtils';
-import { COLORS } from '../theme';
+import { useTheme, useThemedStyles } from '../theme';
+import type { ThemeColors } from '../theme';
 
 export type DonutSlice = {
   key: string;
@@ -30,6 +31,7 @@ export function DonutChart({
   selectedIndex?: number | null;
   onSelectSlice?: (index: number | null) => void;
 }) {
+  const styles = useThemedStyles(createStyles);
   const segments = useMemo(() => buildDonutSegments(slices), [slices]);
   const radius = size / 2;
   const holeSize = Math.round(size * holeRatio);
@@ -157,8 +159,8 @@ export type LineChartPoint = {
 export function TrendLineChart({
   points,
   height = 148,
-  lineColor = COLORS.primary,
-  comparisonColor = '#B0C2D4',
+  lineColor,
+  comparisonColor,
   referenceValue,
   referenceLabel,
   selectedIndex,
@@ -177,6 +179,10 @@ export function TrendLineChart({
   formatShortValue: (value: number) => string;
   showAllLabels?: boolean;
 }) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(createStyles);
+  const resolvedLineColor = lineColor ?? colors.primary;
+  const resolvedComparisonColor = comparisonColor ?? colors.secondary;
   const [chartWidth, setChartWidth] = useState(0);
   const padX = 14;
   const padTop = 16;
@@ -264,7 +270,7 @@ export function TrendLineChart({
                 width: 10,
                 height: columnHeight,
                 backgroundColor:
-                  selectedIndex === coord.index ? `${lineColor}30` : `${lineColor}14`,
+                  selectedIndex === coord.index ? `${resolvedLineColor}30` : `${resolvedLineColor}14`,
               },
             ]}
           />
@@ -282,7 +288,7 @@ export function TrendLineChart({
             y1={coord.compY}
             x2={next.x}
             y2={next.compY}
-            color={comparisonColor}
+            color={resolvedComparisonColor}
             thickness={2}
           />
         );
@@ -298,7 +304,7 @@ export function TrendLineChart({
             y1={coord.y}
             x2={next.x}
             y2={next.y}
-            color={lineColor}
+            color={resolvedLineColor}
             thickness={2.6}
           />
         );
@@ -328,12 +334,12 @@ export function TrendLineChart({
                   style={[
                     styles.dotOuter,
                     {
-                      borderColor: isSelected || coord.highlight ? lineColor : COLORS.white,
+                      borderColor: isSelected || coord.highlight ? resolvedLineColor : colors.surface,
                       backgroundColor: isSelected
-                        ? lineColor
+                        ? resolvedLineColor
                         : coord.highlight
-                          ? lineColor
-                          : COLORS.white,
+                          ? resolvedLineColor
+                          : colors.surface,
                     },
                   ]}
                 >
@@ -342,7 +348,7 @@ export function TrendLineChart({
                       styles.dotInner,
                       {
                         backgroundColor:
-                          isSelected || coord.highlight ? COLORS.white : lineColor,
+                          isSelected || coord.highlight ? colors.onPrimary : resolvedLineColor,
                       },
                     ]}
                   />
@@ -354,7 +360,7 @@ export function TrendLineChart({
                 style={[
                   styles.xLabel,
                   { left: coord.x - 18, top: padTop + plotHeight + 7 },
-                  (coord.highlight || isSelected) && { color: lineColor, fontWeight: '800' },
+                  (coord.highlight || isSelected) && { color: resolvedLineColor, fontWeight: '800' },
                 ]}
                 numberOfLines={1}
               >
@@ -408,132 +414,133 @@ function LineSegment({
   );
 }
 
-const styles = StyleSheet.create({
-  donutWrap: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-  donutClip: {
-    position: 'relative',
-    overflow: 'hidden',
-    backgroundColor: '#EEF2F5',
-  },
-  donutEmptyRing: {
-    borderWidth: 18,
-    borderColor: '#EEF2F5',
-  },
-  fullLayer: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-  },
-  rightHalfClip: {
-    position: 'absolute',
-    top: 0,
-    overflow: 'hidden',
-  },
-  donutHole: {
-    position: 'absolute',
-    backgroundColor: COLORS.white,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 8,
-  },
-  donutCenterTop: {
-    color: COLORS.muted,
-    fontSize: 9,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-  },
-  donutCenterValue: {
-    color: COLORS.ink,
-    fontSize: 13,
-    fontWeight: '800',
-    marginTop: 1,
-  },
-  donutCenterSub: {
-    color: COLORS.primary,
-    fontSize: 10,
-    fontWeight: '700',
-    marginTop: 1,
-  },
-  lineChartRoot: {
-    position: 'relative',
-    width: '100%',
-    marginTop: 12,
-  },
-  gridLineRow: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  gridLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#EFF3F6',
-  },
-  gridLabel: {
-    position: 'absolute',
-    right: 0,
-    top: -13,
-    fontSize: 9,
-    color: '#9AA6B2',
-    fontWeight: '600',
-    backgroundColor: '#ffffffcc',
-    paddingHorizontal: 2,
-  },
-  refLineRow: {
-    position: 'absolute',
-    left: 14,
-    right: 14,
-  },
-  refLine: {
-    borderTopWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: '#C77B1680',
-  },
-  refLabel: {
-    position: 'absolute',
-    left: 0,
-    top: -13,
-    fontSize: 9,
-    color: COLORS.amber,
-    fontWeight: '700',
-  },
-  areaStem: {
-    position: 'absolute',
-    borderTopLeftRadius: 5,
-    borderTopRightRadius: 5,
-  },
-  pointHitTarget: {
-    position: 'absolute',
-    width: 28,
-    height: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dotOuter: {
-    width: 11,
-    height: 11,
-    borderRadius: 6,
-    borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dotInner: {
-    width: 5,
-    height: 5,
-    borderRadius: 3,
-  },
-  xLabel: {
-    position: 'absolute',
-    width: 36,
-    textAlign: 'center',
-    fontSize: 10,
-    color: COLORS.muted,
-  },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    donutWrap: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      position: 'relative',
+    },
+    donutClip: {
+      position: 'relative',
+      overflow: 'hidden',
+      backgroundColor: colors.track,
+    },
+    donutEmptyRing: {
+      borderWidth: 18,
+      borderColor: colors.track,
+    },
+    fullLayer: {
+      position: 'absolute',
+      left: 0,
+      top: 0,
+    },
+    rightHalfClip: {
+      position: 'absolute',
+      top: 0,
+      overflow: 'hidden',
+    },
+    donutHole: {
+      position: 'absolute',
+      backgroundColor: colors.surface,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 8,
+    },
+    donutCenterTop: {
+      color: colors.muted,
+      fontSize: 9,
+      fontWeight: '700',
+      textTransform: 'uppercase',
+      letterSpacing: 0.4,
+    },
+    donutCenterValue: {
+      color: colors.ink,
+      fontSize: 13,
+      fontWeight: '800',
+      marginTop: 1,
+    },
+    donutCenterSub: {
+      color: colors.primary,
+      fontSize: 10,
+      fontWeight: '700',
+      marginTop: 1,
+    },
+    lineChartRoot: {
+      position: 'relative',
+      width: '100%',
+      marginTop: 12,
+    },
+    gridLineRow: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    gridLine: {
+      flex: 1,
+      height: 1,
+      backgroundColor: colors.border,
+    },
+    gridLabel: {
+      position: 'absolute',
+      right: 0,
+      top: -13,
+      fontSize: 9,
+      color: colors.placeholder,
+      fontWeight: '600',
+      backgroundColor: colors.surface,
+      paddingHorizontal: 2,
+    },
+    refLineRow: {
+      position: 'absolute',
+      left: 14,
+      right: 14,
+    },
+    refLine: {
+      borderTopWidth: 1,
+      borderStyle: 'dashed',
+      borderColor: colors.amber,
+    },
+    refLabel: {
+      position: 'absolute',
+      left: 0,
+      top: -13,
+      fontSize: 9,
+      color: colors.amber,
+      fontWeight: '700',
+    },
+    areaStem: {
+      position: 'absolute',
+      borderTopLeftRadius: 5,
+      borderTopRightRadius: 5,
+    },
+    pointHitTarget: {
+      position: 'absolute',
+      width: 28,
+      height: 28,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    dotOuter: {
+      width: 11,
+      height: 11,
+      borderRadius: 6,
+      borderWidth: 2,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    dotInner: {
+      width: 5,
+      height: 5,
+      borderRadius: 3,
+    },
+    xLabel: {
+      position: 'absolute',
+      width: 36,
+      textAlign: 'center',
+      fontSize: 10,
+      color: colors.muted,
+    },
+  });

@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { FlatList, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { Expense, FamilyMember, Preferences } from '../models';
-import { COLORS } from '../theme';
+import { useTheme, useThemedStyles } from '../theme';
+import type { ThemeColors } from '../theme';
 import { ChoiceChip } from '../components/ChoiceChip';
 import { ExpenseRow } from '../components/ExpenseRow';
 
@@ -22,6 +23,8 @@ export function ExpensesScreen({
   onSelectExpense,
   onDeleteExpense,
 }: ExpensesScreenProps) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const [query, setQuery] = useState('');
   const [selectedMemberId, setSelectedMemberId] = useState<string>(ALL_MEMBERS);
 
@@ -58,7 +61,7 @@ export function ExpensesScreen({
         value={query}
         onChangeText={setQuery}
         placeholder="Search expenses, categories, notes, or people"
-        placeholderTextColor="#9AA6B2"
+        placeholderTextColor={colors.placeholder}
         accessibilityLabel="Search expenses"
       />
       {members.length > 1 ? (
@@ -126,52 +129,53 @@ export function ExpensesScreen({
   );
 }
 
-const styles = StyleSheet.create({
-  pageContent: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 28 },
-  eyebrow: { color: COLORS.muted, fontSize: 10, fontWeight: '800', letterSpacing: 1.5, marginBottom: 6 },
-  pageTitle: { color: COLORS.ink, fontSize: 26, fontWeight: '800', marginBottom: 4 },
-  pageSubtitle: { color: COLORS.muted, fontSize: 13, marginBottom: 18 },
-  searchInput: {
-    backgroundColor: COLORS.white,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 14,
-    minHeight: 48,
-    paddingHorizontal: 14,
-    color: COLORS.ink,
-    marginBottom: 12,
-  },
-  filterChips: {
-    flexDirection: 'row',
-    gap: 8,
-    paddingBottom: 14,
-  },
-  rowShell: {
-    backgroundColor: COLORS.white,
-    paddingHorizontal: 15,
-    borderLeftWidth: 1,
-    borderRightWidth: 1,
-    borderColor: COLORS.border,
-  },
-  rowFirst: {
-    borderTopWidth: 1,
-    borderTopLeftRadius: 18,
-    borderTopRightRadius: 18,
-    paddingTop: 4,
-  },
-  rowLast: {
-    borderBottomWidth: 1,
-    borderBottomLeftRadius: 18,
-    borderBottomRightRadius: 18,
-    paddingBottom: 4,
-  },
-  emptyCard: {
-    padding: 20,
-    backgroundColor: COLORS.white,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  emptyTitle: { color: COLORS.ink, fontWeight: '800', fontSize: 15, marginBottom: 6 },
-  emptyText: { color: COLORS.muted, fontSize: 13, lineHeight: 19 },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    pageContent: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 28 },
+    eyebrow: { color: colors.muted, fontSize: 10, fontWeight: '800', letterSpacing: 1.5, marginBottom: 6 },
+    pageTitle: { color: colors.ink, fontSize: 26, fontWeight: '800', marginBottom: 4 },
+    pageSubtitle: { color: colors.muted, fontSize: 13, marginBottom: 18 },
+    searchInput: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 14,
+      minHeight: 48,
+      paddingHorizontal: 14,
+      color: colors.ink,
+      marginBottom: 12,
+    },
+    filterChips: {
+      flexDirection: 'row',
+      gap: 8,
+      paddingBottom: 14,
+    },
+    rowShell: {
+      backgroundColor: colors.surface,
+      paddingHorizontal: 15,
+      borderLeftWidth: 1,
+      borderRightWidth: 1,
+      borderColor: colors.border,
+    },
+    rowFirst: {
+      borderTopWidth: 1,
+      borderTopLeftRadius: 18,
+      borderTopRightRadius: 18,
+      paddingTop: 4,
+    },
+    rowLast: {
+      borderBottomWidth: 1,
+      borderBottomLeftRadius: 18,
+      borderBottomRightRadius: 18,
+      paddingBottom: 4,
+    },
+    emptyCard: {
+      padding: 20,
+      backgroundColor: colors.surface,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    emptyTitle: { color: colors.ink, fontWeight: '800', fontSize: 15, marginBottom: 6 },
+    emptyText: { color: colors.muted, fontSize: 13, lineHeight: 19 },
+  });

@@ -83,6 +83,40 @@ export function buildUnitOptions(
 }
 
 export type CurrencyCode = 'INR' | 'USD' | 'EUR' | 'GBP';
+export type ThemeMode = 'light' | 'dark';
+export type ThemePreference = 'auto' | ThemeMode;
+
+export const LIGHT_THEME_START_HOUR = 6;
+export const DARK_THEME_START_HOUR = 18;
+
+/** Resolves the active light or dark theme from user preference and local clock hour. */
+export function resolveThemeMode(
+  preference: ThemePreference | undefined,
+  now = new Date()
+): ThemeMode {
+  if (preference === 'light' || preference === 'dark') {
+    return preference;
+  }
+  const hour = now.getHours();
+  return hour >= LIGHT_THEME_START_HOUR && hour < DARK_THEME_START_HOUR
+    ? 'light'
+    : 'dark';
+}
+
+/** Returns milliseconds until the next automatic 6:00 AM or 6:00 PM theme boundary. */
+export function getNextThemeChangeDelayMs(now = new Date()): number {
+  const hour = now.getHours();
+  const next = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  if (hour < LIGHT_THEME_START_HOUR) {
+    next.setHours(LIGHT_THEME_START_HOUR, 0, 0, 0);
+  } else if (hour < DARK_THEME_START_HOUR) {
+    next.setHours(DARK_THEME_START_HOUR, 0, 0, 0);
+  } else {
+    next.setDate(next.getDate() + 1);
+    next.setHours(LIGHT_THEME_START_HOUR, 0, 0, 0);
+  }
+  return Math.max(1000, next.getTime() - now.getTime() + 500);
+}
 
 export type Expense = {
   id: string;
@@ -108,6 +142,7 @@ export type Preferences = {
   displayName: string;
   selfId: string;
   monthlyBudget?: number;
+  theme?: ThemePreference;
 };
 
 export type BackupDocument = {

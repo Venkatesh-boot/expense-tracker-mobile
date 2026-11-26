@@ -9,15 +9,17 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import type { CurrencyCode, Preferences } from '../models';
+import type { CurrencyCode, Preferences, ThemePreference } from '../models';
 import { CURRENCIES, CURRENCY_SYMBOLS, sanitizeQuantityInput } from '../models';
-import { COLORS } from '../theme';
+import { useTheme, useThemedStyles } from '../theme';
+import type { ThemeColors } from '../theme';
 import { ChoiceChip } from '../components/ChoiceChip';
 import { SectionHeading } from '../components/SectionHeading';
 
 type SettingsScreenProps = {
   preferences: Preferences;
   onSave: (preferences: Preferences) => Promise<void>;
+  onSelectTheme: (theme: ThemePreference) => void;
   onExport: () => Promise<void>;
   onExportCsv: () => Promise<void>;
   onImport: () => Promise<void>;
@@ -26,10 +28,14 @@ type SettingsScreenProps = {
 export function SettingsScreen({
   preferences,
   onSave,
+  onSelectTheme,
   onExport,
   onExportCsv,
   onImport,
 }: SettingsScreenProps) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(createStyles);
+  const themePreference: ThemePreference = preferences.theme ?? 'auto';
   const [displayName, setDisplayName] = useState(preferences.displayName);
   const [currency, setCurrency] = useState<CurrencyCode>(preferences.currency);
   const [budgetText, setBudgetText] = useState(
@@ -65,6 +71,7 @@ export function SettingsScreen({
         displayName: displayName.trim(),
         currency,
         monthlyBudget: parsedBudget,
+        theme: themePreference,
       });
       Alert.alert('Settings saved', 'Your preferences are stored on this device.');
     } catch (error) {
@@ -104,9 +111,27 @@ export function SettingsScreen({
           value={displayName}
           onChangeText={setDisplayName}
           placeholder="Name"
-          placeholderTextColor="#9AA6B2"
+          placeholderTextColor={colors.placeholder}
           maxLength={100}
         />
+        <Text style={styles.inputLabel}>Appearance</Text>
+        <View style={styles.chipWrap}>
+          <ChoiceChip
+            label="Auto (6 AM–6 PM)"
+            selected={themePreference === 'auto'}
+            onPress={() => onSelectTheme('auto')}
+          />
+          <ChoiceChip
+            label="Light"
+            selected={themePreference === 'light'}
+            onPress={() => onSelectTheme('light')}
+          />
+          <ChoiceChip
+            label="Dark"
+            selected={themePreference === 'dark'}
+            onPress={() => onSelectTheme('dark')}
+          />
+        </View>
         <Text style={styles.inputLabel}>Currency</Text>
         <View style={styles.chipWrap}>
           {CURRENCIES.map((code) => (
@@ -126,7 +151,7 @@ export function SettingsScreen({
           value={budgetText}
           onChangeText={(value) => setBudgetText(sanitizeQuantityInput(value))}
           placeholder="e.g. 25000 (leave blank for none)"
-          placeholderTextColor="#9AA6B2"
+          placeholderTextColor={colors.placeholder}
           keyboardType="decimal-pad"
           inputMode="decimal"
           accessibilityLabel="Monthly budget"
@@ -147,7 +172,7 @@ export function SettingsScreen({
           Export creates a JSON backup you can share or download to move data to another device. Import merges new expenses and members without deleting existing data. You can also export a CSV spreadsheet for Excel or Google Sheets.
         </Text>
         {transferring ? (
-          <ActivityIndicator color={COLORS.primary} style={styles.transferSpinner} />
+          <ActivityIndicator color={colors.primary} style={styles.transferSpinner} />
         ) : (
           <View style={styles.transferStack}>
             <View style={styles.transferButtons}>
@@ -175,37 +200,38 @@ export function SettingsScreen({
   );
 }
 
-const styles = StyleSheet.create({
-  pageContent: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 28 },
-  eyebrow: { color: COLORS.muted, fontSize: 10, fontWeight: '800', letterSpacing: 1.5, marginBottom: 6 },
-  pageTitle: { color: COLORS.ink, fontSize: 26, fontWeight: '800', marginBottom: 4 },
-  pageSubtitle: { color: COLORS.muted, fontSize: 13, marginBottom: 18 },
-  card: { backgroundColor: COLORS.white, borderRadius: 18, padding: 16, borderWidth: 1, borderColor: COLORS.border },
-  cardTitle: { color: COLORS.ink, fontWeight: '800', fontSize: 15, marginBottom: 4 },
-  inputLabel: { color: COLORS.ink, fontWeight: '700', fontSize: 12, marginBottom: 7, marginTop: 12 },
-  input: {
-    minHeight: 48,
-    backgroundColor: COLORS.white,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 13,
-    paddingHorizontal: 13,
-    color: COLORS.ink,
-    fontSize: 14,
-  },
-  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 2 },
-  primaryButton: { backgroundColor: COLORS.primary, minHeight: 50, borderRadius: 15, justifyContent: 'center', alignItems: 'center', marginTop: 16, paddingHorizontal: 16 },
-  primaryButtonText: { color: COLORS.white, fontWeight: '800', fontSize: 15 },
-  disabledButton: { opacity: 0.6 },
-  infoCard: { padding: 16, borderRadius: 18, backgroundColor: '#EEF4FA' },
-  infoTitle: { color: COLORS.ink, fontWeight: '800', fontSize: 14, marginBottom: 7 },
-  infoText: { color: COLORS.muted, fontSize: 12, lineHeight: 18 },
-  transferStack: { gap: 9, marginTop: 14 },
-  transferButtons: { flexDirection: 'row', gap: 9 },
-  secondaryButton: { flex: 1, minHeight: 44, borderRadius: 12, backgroundColor: COLORS.white, borderWidth: 1, borderColor: COLORS.border, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8 },
-  secondaryButtonText: { color: COLORS.primary, fontWeight: '800', fontSize: 12 },
-  transferSpinner: { marginTop: 16 },
-  privacyPanel: { padding: 16, borderRadius: 18, backgroundColor: '#EAF4EF', marginTop: 16 },
-  privacyPanelTitle: { color: COLORS.primary, fontWeight: '800', fontSize: 14, marginBottom: 6 },
-  privacyPanelText: { color: '#4E7164', fontSize: 12, lineHeight: 18 },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    pageContent: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 28 },
+    eyebrow: { color: colors.muted, fontSize: 10, fontWeight: '800', letterSpacing: 1.5, marginBottom: 6 },
+    pageTitle: { color: colors.ink, fontSize: 26, fontWeight: '800', marginBottom: 4 },
+    pageSubtitle: { color: colors.muted, fontSize: 13, marginBottom: 18 },
+    card: { backgroundColor: colors.surface, borderRadius: 18, padding: 16, borderWidth: 1, borderColor: colors.border },
+    cardTitle: { color: colors.ink, fontWeight: '800', fontSize: 15, marginBottom: 4 },
+    inputLabel: { color: colors.ink, fontWeight: '700', fontSize: 12, marginBottom: 7, marginTop: 12 },
+    input: {
+      minHeight: 48,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 13,
+      paddingHorizontal: 13,
+      color: colors.ink,
+      fontSize: 14,
+    },
+    chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 2 },
+    primaryButton: { backgroundColor: colors.primary, minHeight: 50, borderRadius: 15, justifyContent: 'center', alignItems: 'center', marginTop: 16, paddingHorizontal: 16 },
+    primaryButtonText: { color: colors.onPrimary, fontWeight: '800', fontSize: 15 },
+    disabledButton: { opacity: 0.6 },
+    infoCard: { padding: 16, borderRadius: 18, backgroundColor: colors.surfaceTint },
+    infoTitle: { color: colors.ink, fontWeight: '800', fontSize: 14, marginBottom: 7 },
+    infoText: { color: colors.muted, fontSize: 12, lineHeight: 18 },
+    transferStack: { gap: 9, marginTop: 14 },
+    transferButtons: { flexDirection: 'row', gap: 9 },
+    secondaryButton: { flex: 1, minHeight: 44, borderRadius: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8 },
+    secondaryButtonText: { color: colors.primary, fontWeight: '800', fontSize: 12 },
+    transferSpinner: { marginTop: 16 },
+    privacyPanel: { padding: 16, borderRadius: 18, backgroundColor: colors.primaryLight, marginTop: 16, borderWidth: 1, borderColor: colors.primaryBorder },
+    privacyPanelTitle: { color: colors.primary, fontWeight: '800', fontSize: 14, marginBottom: 6 },
+    privacyPanelText: { color: colors.muted, fontSize: 12, lineHeight: 18 },
+  });

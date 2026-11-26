@@ -11,7 +11,8 @@ import {
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import type { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { displayDate } from './models';
-import { COLORS } from './theme';
+import { useTheme, useThemedStyles } from './theme';
+import type { ThemeColors } from './theme';
 import { AppIcon } from './components/AppIcon';
 
 export type DropdownOption<T extends string> = {
@@ -39,6 +40,8 @@ export function Dropdown<T extends string>({
   inline?: boolean;
   modalTitle?: string;
 }) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const [open, setOpen] = useState(false);
   const selected = options.find((option) => option.value === value);
   const displayLabel = selected?.shortLabel ?? selected?.label;
@@ -56,7 +59,7 @@ export function Dropdown<T extends string>({
           {displayLabel || placeholder}
         </Text>
         <View style={styles.iconRight}>
-          <AppIcon name="chevronDown" color={COLORS.primary} size={compact ? 14 : 16} />
+          <AppIcon name="chevronDown" color={colors.primary} size={compact ? 14 : 16} />
         </View>
       </Pressable>
       <Modal
@@ -81,7 +84,7 @@ export function Dropdown<T extends string>({
                   <Text style={[styles.optionText, option.value === value && styles.optionTextSelected]}>
                     {option.label}
                   </Text>
-                  {option.value === value ? <AppIcon name="check" color={COLORS.primary} size={16} /> : null}
+                  {option.value === value ? <AppIcon name="check" color={colors.primary} size={16} /> : null}
                 </Pressable>
               ))}
             </ScrollView>
@@ -104,6 +107,8 @@ export function DatePickerField({
   value: string;
   onChange: (value: string) => void;
 }) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const [iosOpen, setIosOpen] = useState(false);
   const parsedDate = parseDate(value) || new Date();
 
@@ -136,7 +141,7 @@ export function DatePickerField({
               border: 'none',
               outline: 'none',
               backgroundColor: 'transparent',
-              color: COLORS.ink,
+              color: colors.ink,
               fontSize: 14,
               fontWeight: 600,
               fontFamily: 'inherit',
@@ -172,7 +177,7 @@ export function DatePickerField({
       >
         <Text style={styles.dropdownValue}>{displayDate(value)}</Text>
         <View style={styles.iconRight}>
-          <AppIcon name="calendar" color={COLORS.primary} size={17} />
+          <AppIcon name="calendar" color={colors.primary} size={17} />
         </View>
       </Pressable>
       {Platform.OS === 'ios' ? (
@@ -216,40 +221,41 @@ export function toIsoDate(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
-const styles = StyleSheet.create({
-  field: { marginTop: 12 },
-  compactField: { marginTop: 0 },
-  label: { color: COLORS.ink, fontWeight: '700', fontSize: 12, marginBottom: 7 },
-  dropdown: {
-    minHeight: 48,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: COLORS.white,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 13,
-    paddingHorizontal: 13,
-  },
-  dropdownCompact: {
-    minHeight: 38,
-    borderRadius: 10,
-    paddingHorizontal: 10,
-  },
-  dropdownValue: { color: COLORS.ink, fontSize: 14, fontWeight: '600', flex: 1 },
-  dropdownValueCompact: { fontSize: 12 },
-  placeholder: { color: COLORS.muted },
-  iconRight: { marginLeft: 8 },
-  modalBackdrop: { flex: 1, backgroundColor: '#14203377', justifyContent: 'center', padding: 24 },
-  optionsCard: { maxHeight: '75%', backgroundColor: COLORS.white, borderRadius: 20, padding: 16 },
-  optionsTitle: { color: COLORS.ink, fontSize: 17, fontWeight: '800', marginBottom: 12 },
-  optionsList: { flexGrow: 0 },
-  option: { minHeight: 48, borderBottomWidth: 1, borderBottomColor: COLORS.border, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10 },
-  optionSelected: { backgroundColor: COLORS.primaryLight },
-  optionText: { flex: 1, color: COLORS.ink, fontSize: 14 },
-  optionTextSelected: { color: COLORS.primary, fontWeight: '800' },
-  dismissButton: { alignSelf: 'flex-end', paddingVertical: 12, paddingHorizontal: 10 },
-  dismissText: { color: COLORS.primary, fontSize: 14, fontWeight: '800' },
-  iosDateCard: { backgroundColor: COLORS.white, borderRadius: 22, padding: 16 },
-  iosDateHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    field: { marginTop: 12 },
+    compactField: { marginTop: 0 },
+    label: { color: colors.ink, fontWeight: '700', fontSize: 12, marginBottom: 7 },
+    dropdown: {
+      minHeight: 48,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 13,
+      paddingHorizontal: 13,
+    },
+    dropdownCompact: {
+      minHeight: 38,
+      borderRadius: 10,
+      paddingHorizontal: 10,
+    },
+    dropdownValue: { color: colors.ink, fontSize: 14, fontWeight: '600', flex: 1 },
+    dropdownValueCompact: { fontSize: 12 },
+    placeholder: { color: colors.muted },
+    iconRight: { marginLeft: 8 },
+    modalBackdrop: { flex: 1, backgroundColor: colors.backdrop, justifyContent: 'center', padding: 24 },
+    optionsCard: { maxHeight: '75%', backgroundColor: colors.surface, borderRadius: 20, padding: 16, borderWidth: 1, borderColor: colors.border },
+    optionsTitle: { color: colors.ink, fontSize: 17, fontWeight: '800', marginBottom: 12 },
+    optionsList: { flexGrow: 0 },
+    option: { minHeight: 48, borderBottomWidth: 1, borderBottomColor: colors.border, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10 },
+    optionSelected: { backgroundColor: colors.primaryLight },
+    optionText: { flex: 1, color: colors.ink, fontSize: 14 },
+    optionTextSelected: { color: colors.primary, fontWeight: '800' },
+    dismissButton: { alignSelf: 'flex-end', paddingVertical: 12, paddingHorizontal: 10 },
+    dismissText: { color: colors.primary, fontSize: 14, fontWeight: '800' },
+    iosDateCard: { backgroundColor: colors.surface, borderRadius: 22, padding: 16 },
+    iosDateHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  });

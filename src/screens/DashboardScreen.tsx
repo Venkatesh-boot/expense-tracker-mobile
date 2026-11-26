@@ -17,7 +17,8 @@ import {
   sanitizeQuantityInput,
 } from '../models';
 import { buildDashboardSummary } from '../dashboardUtils';
-import { COLORS } from '../theme';
+import { useTheme, useThemedStyles } from '../theme';
+import type { ThemeColors } from '../theme';
 import { AppIcon } from '../components/AppIcon';
 import type { AppIconName } from '../components/AppIcon';
 import { DonutChart, TrendLineChart } from '../components/Charts';
@@ -51,6 +52,8 @@ export function DashboardScreen({
   onSelectExpense,
   onDeleteExpense,
 }: DashboardScreenProps) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const [trendMode, setTrendMode] = useState<'7d' | '6m' | 'pace'>('7d');
   const [chartType, setChartType] = useState<'line' | 'bar'>('line');
   const [selectedPointIndex, setSelectedPointIndex] = useState<number | null>(null);
@@ -167,7 +170,7 @@ export function DashboardScreen({
           accessibilityRole="button"
           accessibilityLabel="Open family members"
         >
-          <AppIcon name="family" color={COLORS.primary} size={14} />
+          <AppIcon name="family" color={colors.primary} size={14} />
           <Text style={styles.familyBadgeText}>
             {members.length} {members.length === 1 ? 'member' : 'members'}
           </Text>
@@ -270,9 +273,9 @@ export function DashboardScreen({
             </View>
           </View>
         ) : (
-          <Pressable style={styles.budgetPrompt} onPress={openBudgetModal} accessibilityRole="button">
+                  <Pressable style={styles.budgetPrompt} onPress={openBudgetModal} accessibilityRole="button">
             <View style={styles.budgetPromptLeft}>
-              <AppIcon name="target" color="#D5EAE1" size={16} />
+              <AppIcon name="target" color={colors.primarySoftText} size={16} />
               <Text style={styles.budgetPromptText}>
                 Set a monthly budget to track remaining & daily pace
               </Text>
@@ -299,7 +302,7 @@ export function DashboardScreen({
             accessibilityLabel={label}
           >
             <View style={[styles.quickActionIcon, primary && styles.quickActionIconPrimary]}>
-              <AppIcon name={icon} color={primary ? COLORS.white : COLORS.primary} size={16} />
+              <AppIcon name={icon} color={primary ? colors.onPrimary : colors.primary} size={16} />
             </View>
             <Text style={[styles.quickActionLabel, primary && styles.quickActionLabelPrimary]}>
               {label}
@@ -311,8 +314,8 @@ export function DashboardScreen({
       <View style={styles.kpiGrid}>
         <View style={styles.kpiCard}>
           <View style={styles.kpiHeader}>
-            <View style={[styles.kpiIconBadge, { backgroundColor: '#E7F3EE' }]}>
-              <AppIcon name="trend" color={COLORS.primary} size={15} />
+            <View style={[styles.kpiIconBadge, { backgroundColor: colors.primaryLight }]}>
+              <AppIcon name="trend" color={colors.primary} size={15} />
             </View>
             <Text style={styles.kpiTag}>{summary.activeSpendDays}d active</Text>
           </View>
@@ -324,8 +327,8 @@ export function DashboardScreen({
 
         <View style={styles.kpiCard}>
           <View style={styles.kpiHeader}>
-            <View style={[styles.kpiIconBadge, { backgroundColor: '#FDF2E3' }]}>
-              <AppIcon name="chart" color={COLORS.amber} size={15} />
+            <View style={[styles.kpiIconBadge, { backgroundColor: colors.amberLight }]}>
+              <AppIcon name="chart" color={colors.amber} size={15} />
             </View>
             <Text style={styles.kpiTag}>{summary.monthCount} entries</Text>
           </View>
@@ -337,8 +340,8 @@ export function DashboardScreen({
 
         <View style={styles.kpiCard}>
           <View style={styles.kpiHeader}>
-            <View style={[styles.kpiIconBadge, { backgroundColor: '#EBF3FB' }]}>
-              <AppIcon name="wallet" color="#3A75B5" size={15} />
+            <View style={[styles.kpiIconBadge, { backgroundColor: colors.secondaryLight }]}>
+              <AppIcon name="wallet" color={colors.secondary} size={15} />
             </View>
             <Text style={styles.kpiTag}>{topCategory ? `${topCategory.percent}% share` : 'Top'}</Text>
           </View>
@@ -359,8 +362,8 @@ export function DashboardScreen({
           accessibilityRole={summary.largestExpense ? 'button' : undefined}
         >
           <View style={styles.kpiHeader}>
-            <View style={[styles.kpiIconBadge, { backgroundColor: '#FBECEC' }]}>
-              <AppIcon name="target" color={COLORS.danger} size={15} />
+            <View style={[styles.kpiIconBadge, { backgroundColor: colors.dangerLight }]}>
+              <AppIcon name="target" color={colors.danger} size={15} />
             </View>
             <Text style={styles.kpiTag}>Biggest</Text>
           </View>
@@ -388,10 +391,10 @@ export function DashboardScreen({
                     {
                       backgroundColor:
                         insight.tone === 'positive'
-                          ? COLORS.primary
+                          ? colors.success
                           : insight.tone === 'warning'
-                            ? COLORS.amber
-                            : '#528AC7',
+                            ? colors.amber
+                            : colors.secondary,
                     },
                   ]}
                 />
@@ -494,11 +497,11 @@ export function DashboardScreen({
           ) : trendMode === 'pace' && summary.cumulativePace.comparisonKind !== 'none' ? (
             <View style={styles.paceLegendRow}>
               <View style={styles.paceLegendItem}>
-                <View style={[styles.paceLegendSwatch, { backgroundColor: COLORS.primary }]} />
+                <View style={[styles.paceLegendSwatch, { backgroundColor: colors.primary }]} />
                 <Text style={styles.paceLegendText}>This month</Text>
               </View>
               <View style={styles.paceLegendItem}>
-                <View style={[styles.paceLegendSwatch, { backgroundColor: '#B0C2D4' }]} />
+                <View style={[styles.paceLegendSwatch, { backgroundColor: colors.secondary }]} />
                 <Text style={styles.paceLegendText}>
                   {summary.cumulativePace.comparisonKind === 'prev_month'
                     ? summary.prevMonthLabel
@@ -512,8 +515,8 @@ export function DashboardScreen({
         {trendMode === 'pace' || chartType === 'line' ? (
           <TrendLineChart
             points={trendPoints}
-            lineColor={COLORS.primary}
-            comparisonColor="#B0C2D4"
+            lineColor={colors.primary}
+            comparisonColor={colors.secondary}
             referenceValue={
               trendMode === '7d'
                 ? summary.weekDailyAverage
@@ -550,10 +553,10 @@ export function DashboardScreen({
                         height: day.total > 0 ? Math.max(8, (day.total / summary.maxDay) * 76) : 3,
                         backgroundColor:
                           day.date === summary.todayKey
-                            ? COLORS.primary
+                            ? colors.primary
                             : day.total > 0
-                              ? '#8CC2AD'
-                              : '#E6ECEF',
+                              ? colors.primaryMid
+                              : colors.track,
                       },
                     ]}
                   />
@@ -581,10 +584,10 @@ export function DashboardScreen({
                             ? Math.max(8, (month.total / summary.maxSixMonth) * 76)
                             : 3,
                         backgroundColor: month.isCurrent
-                          ? COLORS.primary
+                          ? colors.primary
                           : month.total > 0
-                            ? '#7FAFD9'
-                            : '#E6ECEF',
+                            ? colors.secondary
+                            : colors.track,
                       },
                     ]}
                   />
@@ -871,7 +874,7 @@ export function DashboardScreen({
               value={budgetInput}
               onChangeText={(value) => setBudgetInput(sanitizeQuantityInput(value))}
               placeholder="e.g. 25000"
-              placeholderTextColor="#9AA6B2"
+              placeholderTextColor={colors.placeholder}
               keyboardType="decimal-pad"
               inputMode="decimal"
               accessibilityLabel="Monthly budget amount"
@@ -909,397 +912,400 @@ export function DashboardScreen({
   );
 }
 
-const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  pageContent: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 28 },
-  greetingRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18, gap: 12 },
-  eyebrow: { color: COLORS.muted, fontSize: 10, fontWeight: '800', letterSpacing: 1.5, marginBottom: 4 },
-  greeting: { color: COLORS.ink, fontSize: 23, fontWeight: '800' },
-  greetingSub: { color: COLORS.muted, fontSize: 12, marginTop: 2 },
-  familyBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: COLORS.primaryLight,
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  familyBadgeText: { color: COLORS.primary, fontSize: 11, fontWeight: '700' },
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    flex: { flex: 1 },
+    pageContent: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 28 },
+    greetingRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18, gap: 12 },
+    eyebrow: { color: colors.muted, fontSize: 10, fontWeight: '800', letterSpacing: 1.5, marginBottom: 4 },
+    greeting: { color: colors.ink, fontSize: 23, fontWeight: '800' },
+    greetingSub: { color: colors.muted, fontSize: 12, marginTop: 2 },
+    familyBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      backgroundColor: colors.primaryLight,
+      borderRadius: 16,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+    },
+    familyBadgeText: { color: colors.primary, fontSize: 11, fontWeight: '700' },
 
-  summaryCard: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 24,
-    padding: 20,
-    overflow: 'hidden',
-  },
-  summaryDecorOne: {
-    position: 'absolute',
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    backgroundColor: '#ffffff0d',
-    right: -30,
-    top: -55,
-  },
-  summaryDecorTwo: {
-    position: 'absolute',
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: '#ffffff0d',
-    right: 34,
-    bottom: -52,
-  },
-  summaryTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 8,
-  },
-  summaryLabel: { color: '#D5EAE1', fontWeight: '700', fontSize: 11, letterSpacing: 0.6 },
-  momBadge: { borderRadius: 12, paddingHorizontal: 9, paddingVertical: 4 },
-  momBadgeGood: { backgroundColor: '#164E3F' },
-  momBadgeWarn: { backgroundColor: '#694613' },
-  momBadgeText: { fontSize: 11, fontWeight: '800' },
-  momTextGood: { color: '#A5F0D2' },
-  momTextWarn: { color: '#FFE1A8' },
-  momBadgeNeutral: {
-    backgroundColor: '#ffffff1c',
-    borderRadius: 12,
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-  },
-  momBadgeTextNeutral: { color: '#E2F2EB', fontSize: 11, fontWeight: '700' },
-  summaryAmount: { color: COLORS.white, fontSize: 34, fontWeight: '800', marginTop: 8 },
-  heroStatsStrip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#195747',
-    borderRadius: 14,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    marginTop: 16,
-  },
-  heroStatCell: { flex: 1, alignItems: 'center' },
-  heroStatDivider: { width: 1, height: 24, backgroundColor: '#ffffff24' },
-  heroStatLabel: { color: '#BFE0D2', fontSize: 10, fontWeight: '600' },
-  heroStatValue: { color: COLORS.white, fontSize: 13, fontWeight: '800', marginTop: 3 },
+    summaryCard: {
+      backgroundColor: colors.heroBg,
+      borderRadius: 24,
+      padding: 20,
+      overflow: 'hidden',
+    },
+    summaryDecorOne: {
+      position: 'absolute',
+      width: 150,
+      height: 150,
+      borderRadius: 75,
+      backgroundColor: '#ffffff0d',
+      right: -30,
+      top: -55,
+    },
+    summaryDecorTwo: {
+      position: 'absolute',
+      width: 100,
+      height: 100,
+      borderRadius: 50,
+      backgroundColor: '#ffffff0d',
+      right: 34,
+      bottom: -52,
+    },
+    summaryTopRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      gap: 8,
+    },
+    summaryLabel: { color: colors.primarySoftText, fontWeight: '700', fontSize: 11, letterSpacing: 0.6 },
+    momBadge: { borderRadius: 12, paddingHorizontal: 9, paddingVertical: 4 },
+    momBadgeGood: { backgroundColor: colors.successDark },
+    momBadgeWarn: { backgroundColor: '#78350F' },
+    momBadgeText: { fontSize: 11, fontWeight: '800' },
+    momTextGood: { color: '#A7F3D0' },
+    momTextWarn: { color: '#FDE68A' },
+    momBadgeNeutral: {
+      backgroundColor: '#ffffff1c',
+      borderRadius: 12,
+      paddingHorizontal: 9,
+      paddingVertical: 4,
+    },
+    momBadgeTextNeutral: { color: colors.primarySoftText, fontSize: 11, fontWeight: '700' },
+    summaryAmount: { color: colors.onPrimary, fontSize: 34, fontWeight: '800', marginTop: 8 },
+    heroStatsStrip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.heroSubBg,
+      borderRadius: 14,
+      paddingVertical: 10,
+      paddingHorizontal: 12,
+      marginTop: 16,
+    },
+    heroStatCell: { flex: 1, alignItems: 'center' },
+    heroStatDivider: { width: 1, height: 24, backgroundColor: '#ffffff24' },
+    heroStatLabel: { color: colors.primarySoftText, fontSize: 10, fontWeight: '600' },
+    heroStatValue: { color: colors.onPrimary, fontSize: 13, fontWeight: '800', marginTop: 3 },
 
-  budgetPanel: {
-    marginTop: 14,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#ffffff24',
-  },
-  budgetHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  budgetLabel: { color: '#E3F3EC', fontSize: 12, fontWeight: '700' },
-  budgetEditButton: {
-    backgroundColor: '#ffffff22',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 10,
-  },
-  budgetEditText: { color: COLORS.white, fontSize: 11, fontWeight: '800' },
-  budgetTrack: {
-    height: 8,
-    borderRadius: 5,
-    backgroundColor: '#15473A',
-    overflow: 'hidden',
-  },
-  budgetFill: { height: 8, borderRadius: 5 },
-  budgetFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 7,
-    gap: 8,
-  },
-  budgetDetail: { color: '#D5EAE1', fontSize: 11, fontWeight: '600' },
-  budgetPrompt: {
-    marginTop: 14,
-    backgroundColor: '#195747',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-  },
-  budgetPromptLeft: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
-  budgetPromptText: { color: '#D5EAE1', fontSize: 11, flex: 1 },
-  budgetPromptAction: { color: '#A5F0D2', fontSize: 11, fontWeight: '800' },
+    budgetPanel: {
+      marginTop: 14,
+      paddingTop: 12,
+      borderTopWidth: 1,
+      borderTopColor: '#ffffff24',
+    },
+    budgetHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 8,
+    },
+    budgetLabel: { color: colors.primarySoftText, fontSize: 12, fontWeight: '700' },
+    budgetEditButton: {
+      backgroundColor: '#ffffff22',
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 10,
+    },
+    budgetEditText: { color: colors.onPrimary, fontSize: 11, fontWeight: '800' },
+    budgetTrack: {
+      height: 8,
+      borderRadius: 5,
+      backgroundColor: colors.heroSubBg,
+      overflow: 'hidden',
+    },
+    budgetFill: { height: 8, borderRadius: 5 },
+    budgetFooter: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginTop: 7,
+      gap: 8,
+    },
+    budgetDetail: { color: colors.primarySoftText, fontSize: 11, fontWeight: '600' },
+    budgetPrompt: {
+      marginTop: 14,
+      backgroundColor: colors.heroSubBg,
+      borderRadius: 12,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 8,
+    },
+    budgetPromptLeft: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
+    budgetPromptText: { color: colors.primarySoftText, fontSize: 11, flex: 1 },
+    budgetPromptAction: { color: colors.primaryAccentText, fontSize: 11, fontWeight: '800' },
 
-  quickActionsRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 14,
-  },
-  quickActionButton: {
-    flex: 1,
-    backgroundColor: COLORS.white,
-    borderRadius: 15,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    paddingVertical: 11,
-    alignItems: 'center',
-    gap: 6,
-  },
-  quickActionPrimary: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  quickActionIcon: {
-    width: 30,
-    height: 30,
-    borderRadius: 10,
-    backgroundColor: COLORS.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  quickActionIconPrimary: {
-    backgroundColor: '#ffffff24',
-  },
-  quickActionLabel: { color: COLORS.ink, fontSize: 11, fontWeight: '700' },
-  quickActionLabelPrimary: { color: COLORS.white, fontWeight: '800' },
+    quickActionsRow: {
+      flexDirection: 'row',
+      gap: 10,
+      marginTop: 14,
+    },
+    quickActionButton: {
+      flex: 1,
+      backgroundColor: colors.surface,
+      borderRadius: 15,
+      borderWidth: 1,
+      borderColor: colors.border,
+      paddingVertical: 11,
+      alignItems: 'center',
+      gap: 6,
+    },
+    quickActionPrimary: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    quickActionIcon: {
+      width: 30,
+      height: 30,
+      borderRadius: 10,
+      backgroundColor: colors.primaryLight,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    quickActionIconPrimary: {
+      backgroundColor: '#ffffff24',
+    },
+    quickActionLabel: { color: colors.ink, fontSize: 11, fontWeight: '700' },
+    quickActionLabelPrimary: { color: colors.onPrimary, fontWeight: '800' },
 
-  kpiGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    marginTop: 14,
-  },
-  kpiCard: {
-    width: '48.5%',
-    flexGrow: 1,
-    backgroundColor: COLORS.white,
-    borderRadius: 17,
-    padding: 13,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  kpiHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  kpiIconBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  kpiTag: {
-    color: COLORS.muted,
-    fontSize: 10,
-    fontWeight: '700',
-    backgroundColor: '#F3F6F9',
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 8,
-  },
-  kpiValue: { color: COLORS.ink, fontSize: 16, fontWeight: '800' },
-  kpiLabel: { color: COLORS.muted, fontSize: 11, marginTop: 3 },
+    kpiGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 10,
+      marginTop: 14,
+    },
+    kpiCard: {
+      width: '48.5%',
+      flexGrow: 1,
+      backgroundColor: colors.surface,
+      borderRadius: 17,
+      padding: 13,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    kpiHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 8,
+    },
+    kpiIconBadge: {
+      width: 28,
+      height: 28,
+      borderRadius: 9,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    kpiTag: {
+      color: colors.muted,
+      fontSize: 10,
+      fontWeight: '700',
+      backgroundColor: colors.surfaceTint,
+      paddingHorizontal: 7,
+      paddingVertical: 3,
+      borderRadius: 8,
+    },
+    kpiValue: { color: colors.ink, fontSize: 16, fontWeight: '800' },
+    kpiLabel: { color: colors.muted, fontSize: 11, marginTop: 3 },
 
-  insightCard: {
-    backgroundColor: COLORS.white,
-    borderRadius: 18,
-    paddingHorizontal: 15,
-    paddingVertical: 6,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  insightRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  insightRowLast: { borderBottomWidth: 0 },
-  insightDot: { width: 8, height: 8, borderRadius: 4 },
-  insightText: { flex: 1, color: COLORS.ink, fontSize: 12, lineHeight: 18, fontWeight: '500' },
+    insightCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 18,
+      paddingHorizontal: 15,
+      paddingVertical: 6,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    insightRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      paddingVertical: 10,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    insightRowLast: { borderBottomWidth: 0 },
+    insightDot: { width: 8, height: 8, borderRadius: 4 },
+    insightText: { flex: 1, color: colors.ink, fontSize: 12, lineHeight: 18, fontWeight: '500' },
 
-  card: {
-    backgroundColor: COLORS.white,
-    borderRadius: 18,
-    paddingHorizontal: 15,
-    paddingVertical: 4,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  chartCard: {
-    backgroundColor: COLORS.white,
-    borderRadius: 18,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  chartSummary: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 },
-  chartTotal: { color: COLORS.ink, fontSize: 20, fontWeight: '800' },
-  chartCaption: { color: COLORS.muted, fontSize: 11, marginTop: 2 },
-  chartControls: { alignItems: 'flex-end', gap: 6 },
-  segmentedControl: {
-    flexDirection: 'row',
-    backgroundColor: '#F1F4F7',
-    borderRadius: 10,
-    padding: 3,
-  },
-  segmentButton: { paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8 },
-  segmentButtonActive: { backgroundColor: COLORS.white },
-  segmentText: { color: COLORS.muted, fontSize: 11, fontWeight: '700' },
-  segmentTextActive: { color: COLORS.primary, fontWeight: '800' },
-  chartMetaRow: { marginTop: 10, minHeight: 24, justifyContent: 'center' },
-  peakBanner: {
-    alignSelf: 'flex-start',
-    backgroundColor: COLORS.primaryLight,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 9,
-  },
-  peakBannerText: { color: COLORS.primary, fontSize: 11, fontWeight: '700' },
-  paceLegendRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  paceLegendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  paceLegendSwatch: { width: 12, height: 4, borderRadius: 2 },
-  paceLegendText: { color: COLORS.muted, fontSize: 11, fontWeight: '600' },
-  weekChart: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: 14 },
-  weekColumn: { flex: 1, alignItems: 'center', minWidth: 0 },
-  weekAmount: { color: COLORS.muted, fontSize: 8, height: 12, textAlign: 'center', width: '100%' },
-  weekBarTrack: { height: 80, width: '60%', justifyContent: 'flex-end', alignItems: 'center' },
-  weekBar: { width: '100%', minHeight: 3, borderRadius: 6 },
-  weekDay: { color: COLORS.muted, fontSize: 10, marginTop: 7 },
-  weekDayToday: { color: COLORS.primary, fontWeight: '800' },
+    card: {
+      backgroundColor: colors.surface,
+      borderRadius: 18,
+      paddingHorizontal: 15,
+      paddingVertical: 4,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    chartCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 18,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    chartSummary: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 },
+    chartTotal: { color: colors.ink, fontSize: 20, fontWeight: '800' },
+    chartCaption: { color: colors.muted, fontSize: 11, marginTop: 2 },
+    chartControls: { alignItems: 'flex-end', gap: 6 },
+    segmentedControl: {
+      flexDirection: 'row',
+      backgroundColor: colors.surfaceTint,
+      borderRadius: 10,
+      padding: 3,
+    },
+    segmentButton: { paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8 },
+    segmentButtonActive: { backgroundColor: colors.surface },
+    segmentText: { color: colors.muted, fontSize: 11, fontWeight: '700' },
+    segmentTextActive: { color: colors.primary, fontWeight: '800' },
+    chartMetaRow: { marginTop: 10, minHeight: 24, justifyContent: 'center' },
+    peakBanner: {
+      alignSelf: 'flex-start',
+      backgroundColor: colors.primaryLight,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 9,
+    },
+    peakBannerText: { color: colors.primary, fontSize: 11, fontWeight: '700' },
+    paceLegendRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+    paceLegendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    paceLegendSwatch: { width: 12, height: 4, borderRadius: 2 },
+    paceLegendText: { color: colors.muted, fontSize: 11, fontWeight: '600' },
+    weekChart: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: 14 },
+    weekColumn: { flex: 1, alignItems: 'center', minWidth: 0 },
+    weekAmount: { color: colors.muted, fontSize: 8, height: 12, textAlign: 'center', width: '100%' },
+    weekBarTrack: { height: 80, width: '60%', justifyContent: 'flex-end', alignItems: 'center' },
+    weekBar: { width: '100%', minHeight: 3, borderRadius: 6 },
+    weekDay: { color: colors.muted, fontSize: 10, marginTop: 7 },
+    weekDayToday: { color: colors.primary, fontWeight: '800' },
 
-  categoryCard: {
-    backgroundColor: COLORS.white,
-    borderRadius: 18,
-    paddingHorizontal: 15,
-    paddingVertical: 14,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  donutSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    marginBottom: 16,
-  },
-  donutLegend: { flex: 1, gap: 6 },
-  donutLegendRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-    paddingVertical: 4,
-    paddingHorizontal: 6,
-    borderRadius: 8,
-  },
-  donutLegendRowSelected: { backgroundColor: COLORS.primaryLight },
-  donutLegendName: { flex: 1, color: COLORS.ink, fontSize: 12, fontWeight: '600' },
-  donutLegendPct: { color: COLORS.muted, fontSize: 11, fontWeight: '700' },
-  donutLegendMore: { color: COLORS.muted, fontSize: 11, paddingHorizontal: 6, marginTop: 2 },
-  categoryStack: { flexDirection: 'row', height: 10, borderRadius: 6, overflow: 'hidden', marginBottom: 8 },
-  categoryRow: { marginVertical: 10 },
-  categoryNameRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 7, gap: 8 },
-  categoryLabelWrap: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
-  categoryDot: { width: 9, height: 9, borderRadius: 5 },
-  categoryTitleLine: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  categoryCount: {
-    color: COLORS.muted,
-    fontSize: 10,
-    backgroundColor: '#F1F4F7',
-    paddingHorizontal: 6,
-    paddingVertical: 1.5,
-    borderRadius: 7,
-  },
-  categoryName: { color: COLORS.ink, fontSize: 13, fontWeight: '700' },
-  categorySub: { color: COLORS.muted, fontSize: 11, marginTop: 1 },
-  categoryValue: { color: COLORS.ink, fontSize: 12, fontWeight: '700' },
-  progressTrack: { height: 7, borderRadius: 5, backgroundColor: '#EEF2F5', overflow: 'hidden' },
-  progressFill: { height: 7, borderRadius: 5, backgroundColor: '#58A78C' },
+    categoryCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 18,
+      paddingHorizontal: 15,
+      paddingVertical: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    donutSection: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 16,
+      marginBottom: 16,
+    },
+    donutLegend: { flex: 1, gap: 6 },
+    donutLegendRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 7,
+      paddingVertical: 4,
+      paddingHorizontal: 6,
+      borderRadius: 8,
+    },
+    donutLegendRowSelected: { backgroundColor: colors.primaryLight },
+    donutLegendName: { flex: 1, color: colors.ink, fontSize: 12, fontWeight: '600' },
+    donutLegendPct: { color: colors.muted, fontSize: 11, fontWeight: '700' },
+    donutLegendMore: { color: colors.muted, fontSize: 11, paddingHorizontal: 6, marginTop: 2 },
+    categoryStack: { flexDirection: 'row', height: 10, borderRadius: 6, overflow: 'hidden', marginBottom: 8 },
+    categoryRow: { marginVertical: 10 },
+    categoryNameRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 7, gap: 8 },
+    categoryLabelWrap: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
+    categoryDot: { width: 9, height: 9, borderRadius: 5 },
+    categoryTitleLine: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    categoryCount: {
+      color: colors.muted,
+      fontSize: 10,
+      backgroundColor: colors.surfaceTint,
+      paddingHorizontal: 6,
+      paddingVertical: 1.5,
+      borderRadius: 7,
+    },
+    categoryName: { color: colors.ink, fontSize: 13, fontWeight: '700' },
+    categorySub: { color: colors.muted, fontSize: 11, marginTop: 1 },
+    categoryValue: { color: colors.ink, fontSize: 12, fontWeight: '700' },
+    progressTrack: { height: 7, borderRadius: 5, backgroundColor: colors.track, overflow: 'hidden' },
+    progressFill: { height: 7, borderRadius: 5, backgroundColor: colors.primaryMid },
 
-  topPurchaseRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  topPurchaseLast: { borderBottomWidth: 0 },
-  rankBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 9,
-    backgroundColor: COLORS.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  rankText: { color: COLORS.primary, fontSize: 11, fontWeight: '800' },
-  topPurchaseTitle: { color: COLORS.ink, fontSize: 13, fontWeight: '700' },
-  topPurchaseMeta: { color: COLORS.muted, fontSize: 11, marginTop: 2 },
-  topPurchaseAmount: { color: COLORS.ink, fontSize: 14, fontWeight: '800' },
+    topPurchaseRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    topPurchaseLast: { borderBottomWidth: 0 },
+    rankBadge: {
+      width: 28,
+      height: 28,
+      borderRadius: 9,
+      backgroundColor: colors.primaryLight,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    rankText: { color: colors.primary, fontSize: 11, fontWeight: '800' },
+    topPurchaseTitle: { color: colors.ink, fontSize: 13, fontWeight: '700' },
+    topPurchaseMeta: { color: colors.muted, fontSize: 11, marginTop: 2 },
+    topPurchaseAmount: { color: colors.ink, fontSize: 14, fontWeight: '800' },
 
-  equalShareNote: {
-    color: COLORS.muted,
-    fontSize: 11,
-    fontWeight: '600',
-    marginBottom: 6,
-  },
+    equalShareNote: {
+      color: colors.muted,
+      fontSize: 11,
+      fontWeight: '600',
+      marginBottom: 6,
+    },
 
-  emptyCard: {
-    padding: 20,
-    backgroundColor: COLORS.white,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  emptyTitle: { color: COLORS.ink, fontWeight: '800', fontSize: 15, marginBottom: 6 },
-  emptyText: { color: COLORS.muted, fontSize: 13, lineHeight: 19 },
-  privacyNote: { color: COLORS.muted, fontSize: 11, textAlign: 'center', marginTop: 22 },
+    emptyCard: {
+      padding: 20,
+      backgroundColor: colors.surface,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    emptyTitle: { color: colors.ink, fontWeight: '800', fontSize: 15, marginBottom: 6 },
+    emptyText: { color: colors.muted, fontSize: 13, lineHeight: 19 },
+    privacyNote: { color: colors.muted, fontSize: 11, textAlign: 'center', marginTop: 22 },
 
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: '#14203377',
-    justifyContent: 'center',
-    padding: 24,
-  },
-  modalCard: {
-    backgroundColor: COLORS.white,
-    borderRadius: 20,
-    padding: 18,
-  },
-  modalTitle: { color: COLORS.ink, fontSize: 17, fontWeight: '800' },
-  modalHint: { color: COLORS.muted, fontSize: 12, lineHeight: 18, marginTop: 6 },
-  modalInput: {
-    minHeight: 48,
-    backgroundColor: COLORS.white,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 13,
-    paddingHorizontal: 13,
-    color: COLORS.ink,
-    fontSize: 15,
-    fontWeight: '700',
-    marginTop: 14,
-  },
-  modalActions: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 16 },
-  modalClearButton: { paddingVertical: 10, paddingHorizontal: 10 },
-  modalClearText: { color: COLORS.danger, fontSize: 13, fontWeight: '700' },
-  modalCancelButton: { paddingVertical: 10, paddingHorizontal: 12 },
-  modalCancelText: { color: COLORS.muted, fontSize: 13, fontWeight: '700' },
-  modalSaveButton: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 18,
-  },
-  modalSaveText: { color: COLORS.white, fontSize: 13, fontWeight: '800' },
-});
+    modalBackdrop: {
+      flex: 1,
+      backgroundColor: colors.backdrop,
+      justifyContent: 'center',
+      padding: 24,
+    },
+    modalCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 18,
+    },
+    modalTitle: { color: colors.ink, fontSize: 17, fontWeight: '800' },
+    modalHint: { color: colors.muted, fontSize: 12, lineHeight: 18, marginTop: 6 },
+    modalInput: {
+      minHeight: 48,
+      backgroundColor: colors.background,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 13,
+      paddingHorizontal: 13,
+      color: colors.ink,
+      fontSize: 15,
+      fontWeight: '700',
+      marginTop: 14,
+    },
+    modalActions: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 16 },
+    modalClearButton: { paddingVertical: 10, paddingHorizontal: 10 },
+    modalClearText: { color: colors.danger, fontSize: 13, fontWeight: '700' },
+    modalCancelButton: { paddingVertical: 10, paddingHorizontal: 12 },
+    modalCancelText: { color: colors.muted, fontSize: 13, fontWeight: '700' },
+    modalSaveButton: {
+      backgroundColor: colors.primary,
+      borderRadius: 12,
+      paddingVertical: 10,
+      paddingHorizontal: 18,
+    },
+    modalSaveText: { color: colors.onPrimary, fontSize: 13, fontWeight: '800' },
+  });

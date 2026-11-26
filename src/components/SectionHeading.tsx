@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { COLORS } from '../theme';
+import { useThemedStyles } from '../theme';
+import type { ThemeColors } from '../theme';
 
 export function SectionHeading({
   title,
@@ -11,6 +12,7 @@ export function SectionHeading({
   action?: string;
   onAction?: () => void;
 }) {
+  const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.sectionHeading}>
       <Text style={styles.sectionTitle}>{title}</Text>
@@ -23,22 +25,23 @@ export function SectionHeading({
   );
 }
 
-const styles = StyleSheet.create({
-  sectionHeading: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 25,
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    color: COLORS.ink,
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  sectionAction: {
-    color: COLORS.primary,
-    fontWeight: '700',
-    fontSize: 12,
-  },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    sectionHeading: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginTop: 25,
+      marginBottom: 12,
+    },
+    sectionTitle: {
+      color: colors.ink,
+      fontSize: 16,
+      fontWeight: '800',
+    },
+    sectionAction: {
+      color: colors.primary,
+      fontWeight: '700',
+      fontSize: 12,
+    },
+  });

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
-import { COLORS } from '../theme';
+import { useThemedStyles } from '../theme';
+import type { ThemeColors } from '../theme';
 
 export function ChoiceChip({
   label,
@@ -11,6 +12,7 @@ export function ChoiceChip({
   selected: boolean;
   onPress: () => void;
 }) {
+  const styles = useThemedStyles(createStyles);
   return (
     <Pressable
       onPress={onPress}
@@ -23,26 +25,27 @@ export function ChoiceChip({
   );
 }
 
-const styles = StyleSheet.create({
-  choiceChip: {
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.white,
-    paddingHorizontal: 13,
-    paddingVertical: 9,
-    borderRadius: 14,
-  },
-  choiceChipSelected: {
-    backgroundColor: COLORS.primaryLight,
-    borderColor: '#9CCAB8',
-  },
-  choiceChipText: {
-    color: COLORS.muted,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  choiceChipTextSelected: {
-    color: COLORS.primary,
-    fontWeight: '800',
-  },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    choiceChip: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+      paddingHorizontal: 13,
+      paddingVertical: 9,
+      borderRadius: 14,
+    },
+    choiceChipSelected: {
+      backgroundColor: colors.primaryLight,
+      borderColor: colors.primaryBorder,
+    },
+    choiceChipText: {
+      color: colors.muted,
+      fontSize: 12,
+      fontWeight: '600',
+    },
+    choiceChipTextSelected: {
+      color: colors.primary,
+      fontWeight: '800',
+    },
+  });

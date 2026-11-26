@@ -22,7 +22,8 @@ import {
 } from '../models';
 import type { ReceiptScanResult } from '../receipt';
 import { DatePickerField, Dropdown, parseDate } from '../controls';
-import { COLORS } from '../theme';
+import { useTheme, useThemedStyles } from '../theme';
+import type { ThemeColors } from '../theme';
 import { AppIcon } from '../components/AppIcon';
 import { ChoiceChip } from '../components/ChoiceChip';
 
@@ -55,6 +56,8 @@ export function AddExpenseScreen({
   onUpdate,
   onScanReceipt,
 }: AddExpenseProps) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const isEditing = Boolean(editingExpense);
   const [title, setTitle] = useState(editingExpense?.title ?? '');
   const [amount, setAmount] = useState(editingExpense ? editingExpense.amount.toFixed(2) : '');
@@ -285,7 +288,7 @@ export function AddExpenseScreen({
             accessibilityRole="button"
             accessibilityLabel="Go back"
           >
-            <AppIcon name="back" color={COLORS.ink} size={18} />
+            <AppIcon name="back" color={colors.ink} size={18} />
           </Pressable>
           <View style={styles.flex}>
             <Text style={styles.eyebrow}>FAMILY WALLET</Text>
@@ -304,7 +307,7 @@ export function AddExpenseScreen({
               </Text>
             </View>
             {scanning ? (
-              <ActivityIndicator color={COLORS.primary} />
+              <ActivityIndicator color={colors.primary} />
             ) : (
               <View style={styles.scanButtons}>
                 {Platform.OS !== 'web' ? (
@@ -365,7 +368,7 @@ export function AddExpenseScreen({
                       updateReceiptItem(item.id, (row) => ({ ...row, title: value }))
                     }
                     placeholder="Item description"
-                    placeholderTextColor="#9AA6B2"
+                    placeholderTextColor={colors.placeholder}
                     maxLength={160}
                     accessibilityLabel={`Bill item ${index + 1} description`}
                   />
@@ -375,7 +378,7 @@ export function AddExpenseScreen({
                     accessibilityRole="button"
                     accessibilityLabel={`Remove bill item ${index + 1}`}
                   >
-                    <AppIcon name="trash" color={COLORS.danger} size={15} />
+                    <AppIcon name="trash" color={colors.danger} size={15} />
                   </Pressable>
                 </View>
 
@@ -390,7 +393,7 @@ export function AddExpenseScreen({
                       }))
                     }
                     placeholder="Qty"
-                    placeholderTextColor="#9AA6B2"
+                    placeholderTextColor={colors.placeholder}
                     keyboardType="decimal-pad"
                     inputMode="decimal"
                     accessibilityLabel={`Bill item ${index + 1} quantity`}
@@ -415,7 +418,7 @@ export function AddExpenseScreen({
                       updateReceiptItem(item.id, (row) => ({ ...row, amount: value }))
                     }
                     placeholder="0.00"
-                    placeholderTextColor="#9AA6B2"
+                    placeholderTextColor={colors.placeholder}
                     keyboardType="decimal-pad"
                     accessibilityLabel={`Bill item ${index + 1} amount`}
                   />
@@ -466,7 +469,7 @@ export function AddExpenseScreen({
               value={title}
               onChangeText={setTitle}
               placeholder="e.g. Weekly groceries or milk"
-              placeholderTextColor="#9AA6B2"
+              placeholderTextColor={colors.placeholder}
               maxLength={160}
               returnKeyType="next"
             />
@@ -477,7 +480,7 @@ export function AddExpenseScreen({
               value={amount}
               onChangeText={setAmount}
               placeholder="0.00"
-              placeholderTextColor="#9AA6B2"
+              placeholderTextColor={colors.placeholder}
               keyboardType="decimal-pad"
               accessibilityLabel="Expense amount"
             />
@@ -489,7 +492,7 @@ export function AddExpenseScreen({
                 value={quantity}
                 onChangeText={(value) => setQuantity(sanitizeQuantityInput(value))}
                 placeholder="Quantity"
-                placeholderTextColor="#9AA6B2"
+                placeholderTextColor={colors.placeholder}
                 keyboardType="decimal-pad"
                 inputMode="decimal"
                 accessibilityLabel="Expense quantity"
@@ -542,7 +545,7 @@ export function AddExpenseScreen({
           value={notes}
           onChangeText={setNotes}
           placeholder="Anything else to remember?"
-          placeholderTextColor="#9AA6B2"
+          placeholderTextColor={colors.placeholder}
           maxLength={500}
           multiline
           textAlignVertical="top"
@@ -572,96 +575,97 @@ export function AddExpenseScreen({
   );
 }
 
-const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  pageContent: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 28 },
-  formHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 18 },
-  backButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
-    backgroundColor: COLORS.white,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  eyebrow: { color: COLORS.muted, fontSize: 10, fontWeight: '800', letterSpacing: 1.5, marginBottom: 6 },
-  pageTitle: { color: COLORS.ink, fontSize: 26, fontWeight: '800', marginBottom: 4 },
-  scanCard: { backgroundColor: '#ECF5F1', borderRadius: 18, padding: 16, marginBottom: 18 },
-  scanCopy: { marginBottom: 12 },
-  scanTitle: { color: COLORS.ink, fontSize: 14, fontWeight: '800', marginBottom: 4 },
-  scanText: { color: COLORS.muted, fontSize: 12, lineHeight: 17 },
-  scanButtons: { flexDirection: 'row', gap: 8 },
-  scanButton: { borderRadius: 11, paddingHorizontal: 14, paddingVertical: 9, backgroundColor: COLORS.white, borderWidth: 1, borderColor: '#D3E5DD' },
-  scanButtonText: { color: COLORS.primary, fontWeight: '700', fontSize: 12 },
-  scanFeedback: { color: COLORS.primary, fontSize: 12, lineHeight: 17, marginTop: 10 },
-  scanError: { color: COLORS.danger },
-  receiptItems: { marginBottom: 8 },
-  receiptItemsHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 8 },
-  receiptItemsHint: { color: COLORS.muted, fontSize: 12 },
-  clearItemsButton: {
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.white,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-  },
-  clearItemsText: { color: COLORS.primary, fontSize: 11, fontWeight: '700' },
-  receiptItemCard: {
-    backgroundColor: COLORS.white,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 15,
-    padding: 10,
-    marginBottom: 10,
-    gap: 8,
-  },
-  receiptItemTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  receiptItemRow: { flexDirection: 'row', gap: 8 },
-  receiptItemCategoryRow: { flexDirection: 'row', gap: 8 },
-  receiptItemTitle: { flex: 1 },
-  receiptItemQuantity: { width: 72, paddingHorizontal: 10 },
-  receiptItemUnit: { width: 104 },
-  receiptItemAmount: { flex: 1 },
-  removeItemButton: {
-    width: 42,
-    height: 46,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E9C6C6',
-    backgroundColor: '#FDF4F4',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  manualQuantityRow: { flexDirection: 'row', gap: 8 },
-  manualQuantityInput: { flex: 1 },
-  inputLabel: { color: COLORS.ink, fontWeight: '700', fontSize: 12, marginBottom: 7, marginTop: 12 },
-  input: {
-    minHeight: 48,
-    backgroundColor: COLORS.white,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 13,
-    paddingHorizontal: 13,
-    color: COLORS.ink,
-    fontSize: 14,
-  },
-  notesInput: { minHeight: 82, paddingTop: 12 },
-  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 2 },
-  primaryButton: {
-    backgroundColor: COLORS.primary,
-    minHeight: 50,
-    borderRadius: 15,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 16,
-    paddingHorizontal: 16,
-  },
-  primaryButtonText: { color: COLORS.white, fontWeight: '800', fontSize: 15 },
-  disabledButton: { opacity: 0.6 },
-  cancelAction: { minHeight: 46, justifyContent: 'center', alignItems: 'center', marginTop: 4 },
-  cancelActionText: { color: COLORS.muted, fontWeight: '700', fontSize: 13 },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    flex: { flex: 1 },
+    pageContent: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 28 },
+    formHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 18 },
+    backButton: {
+      width: 42,
+      height: 42,
+      borderRadius: 14,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: 12,
+    },
+    eyebrow: { color: colors.muted, fontSize: 10, fontWeight: '800', letterSpacing: 1.5, marginBottom: 6 },
+    pageTitle: { color: colors.ink, fontSize: 26, fontWeight: '800', marginBottom: 4 },
+    scanCard: { backgroundColor: colors.primaryLight, borderRadius: 18, padding: 16, marginBottom: 18, borderWidth: 1, borderColor: colors.primaryBorder },
+    scanCopy: { marginBottom: 12 },
+    scanTitle: { color: colors.ink, fontSize: 14, fontWeight: '800', marginBottom: 4 },
+    scanText: { color: colors.muted, fontSize: 12, lineHeight: 17 },
+    scanButtons: { flexDirection: 'row', gap: 8 },
+    scanButton: { borderRadius: 11, paddingHorizontal: 14, paddingVertical: 9, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.primaryBorder },
+    scanButtonText: { color: colors.primary, fontWeight: '700', fontSize: 12 },
+    scanFeedback: { color: colors.primary, fontSize: 12, lineHeight: 17, marginTop: 10 },
+    scanError: { color: colors.danger },
+    receiptItems: { marginBottom: 8 },
+    receiptItemsHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 8 },
+    receiptItemsHint: { color: colors.muted, fontSize: 12 },
+    clearItemsButton: {
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+      paddingHorizontal: 10,
+      paddingVertical: 7,
+    },
+    clearItemsText: { color: colors.primary, fontSize: 11, fontWeight: '700' },
+    receiptItemCard: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 15,
+      padding: 10,
+      marginBottom: 10,
+      gap: 8,
+    },
+    receiptItemTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    receiptItemRow: { flexDirection: 'row', gap: 8 },
+    receiptItemCategoryRow: { flexDirection: 'row', gap: 8 },
+    receiptItemTitle: { flex: 1 },
+    receiptItemQuantity: { width: 72, paddingHorizontal: 10 },
+    receiptItemUnit: { width: 104 },
+    receiptItemAmount: { flex: 1 },
+    removeItemButton: {
+      width: 42,
+      height: 46,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.dangerBorder,
+      backgroundColor: colors.dangerLight,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    manualQuantityRow: { flexDirection: 'row', gap: 8 },
+    manualQuantityInput: { flex: 1 },
+    inputLabel: { color: colors.ink, fontWeight: '700', fontSize: 12, marginBottom: 7, marginTop: 12 },
+    input: {
+      minHeight: 48,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 13,
+      paddingHorizontal: 13,
+      color: colors.ink,
+      fontSize: 14,
+    },
+    notesInput: { minHeight: 82, paddingTop: 12 },
+    chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 2 },
+    primaryButton: {
+      backgroundColor: colors.primary,
+      minHeight: 50,
+      borderRadius: 15,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginTop: 16,
+      paddingHorizontal: 16,
+    },
+    primaryButtonText: { color: colors.onPrimary, fontWeight: '800', fontSize: 15 },
+    disabledButton: { opacity: 0.6 },
+    cancelAction: { minHeight: 46, justifyContent: 'center', alignItems: 'center', marginTop: 4 },
+    cancelActionText: { color: colors.muted, fontWeight: '700', fontSize: 13 },
+  });

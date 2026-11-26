@@ -6,7 +6,8 @@ import { DatePickerField, Dropdown } from './controls';
 import type { DropdownOption } from './controls';
 import { buildChart, getBounds } from './reportUtils';
 import type { ChartDimension, ReportRange } from './reportUtils';
-import { COLORS } from './theme';
+import { useThemedStyles } from './theme';
+import type { ThemeColors } from './theme';
 
 const ALL = '__all__';
 const RANGE_OPTIONS: DropdownOption<ReportRange>[] = [
@@ -34,6 +35,7 @@ export function ReportsScreen({
   members: FamilyMember[];
   currency: CurrencyCode;
 }) {
+  const styles = useThemedStyles(createStyles);
   const [range, setRange] = useState<ReportRange>('month');
   const [customStart, setCustomStart] = useState(todayString());
   const [customEnd, setCustomEnd] = useState(todayString());
@@ -222,31 +224,32 @@ export function ReportsScreen({
   );
 }
 
-const styles = StyleSheet.create({
-  page: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 32 },
-  eyebrow: { color: COLORS.muted, fontSize: 10, fontWeight: '800', letterSpacing: 1.5, marginBottom: 6 },
-  title: { color: COLORS.ink, fontSize: 26, fontWeight: '800', marginBottom: 4 },
-  subtitle: { color: COLORS.muted, fontSize: 13, lineHeight: 19, marginBottom: 18 },
-  filterCard: { backgroundColor: COLORS.white, borderRadius: 18, borderWidth: 1, borderColor: COLORS.border, padding: 16 },
-  cardTitle: { color: COLORS.ink, fontWeight: '800', fontSize: 15 },
-  dateRange: { flexDirection: 'row', gap: 10 },
-  dateField: { flex: 1 },
-  totalCard: { marginTop: 15, backgroundColor: COLORS.primary, borderRadius: 18, padding: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  totalLabel: { color: '#D5EAE1', fontWeight: '700', fontSize: 10, letterSpacing: 1 },
-  totalAmount: { color: COLORS.white, fontSize: 25, fontWeight: '900', marginTop: 5 },
-  countBadge: { backgroundColor: '#ffffff22', paddingHorizontal: 13, paddingVertical: 9, borderRadius: 13, alignItems: 'center' },
-  countValue: { color: COLORS.white, fontWeight: '900', fontSize: 17 },
-  countLabel: { color: '#D5EAE1', fontWeight: '700', fontSize: 9 },
-  chartCard: { marginTop: 16, backgroundColor: COLORS.white, borderRadius: 18, borderWidth: 1, borderColor: COLORS.border, padding: 16 },
-  chart: { marginTop: 17, gap: 14 },
-  barRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  barLabel: { width: 78, color: COLORS.ink, fontSize: 10, fontWeight: '700' },
-  barTrack: { flex: 1, height: 12, borderRadius: 8, backgroundColor: '#EEF2F5', overflow: 'hidden' },
-  barFill: { height: '100%', borderRadius: 8, backgroundColor: '#58A78C' },
-  barAmount: { width: 74, textAlign: 'right', color: COLORS.muted, fontSize: 9, fontWeight: '700' },
-  rangeCaption: { color: COLORS.muted, fontSize: 10, marginTop: 16 },
-  empty: { paddingVertical: 28, alignItems: 'center' },
-  emptyTitle: { color: COLORS.ink, fontWeight: '800', fontSize: 13, marginBottom: 5 },
-  emptyText: { color: COLORS.muted, fontSize: 11 },
-  note: { color: COLORS.muted, fontSize: 10, lineHeight: 15, marginTop: 14 },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    page: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 32 },
+    eyebrow: { color: colors.muted, fontSize: 10, fontWeight: '800', letterSpacing: 1.5, marginBottom: 6 },
+    title: { color: colors.ink, fontSize: 26, fontWeight: '800', marginBottom: 4 },
+    subtitle: { color: colors.muted, fontSize: 13, lineHeight: 19, marginBottom: 18 },
+    filterCard: { backgroundColor: colors.surface, borderRadius: 18, borderWidth: 1, borderColor: colors.border, padding: 16 },
+    cardTitle: { color: colors.ink, fontWeight: '800', fontSize: 15 },
+    dateRange: { flexDirection: 'row', gap: 10 },
+    dateField: { flex: 1 },
+    totalCard: { marginTop: 15, backgroundColor: colors.heroBg, borderRadius: 18, padding: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    totalLabel: { color: colors.primarySoftText, fontWeight: '700', fontSize: 10, letterSpacing: 1 },
+    totalAmount: { color: colors.onPrimary, fontSize: 25, fontWeight: '900', marginTop: 5 },
+    countBadge: { backgroundColor: '#ffffff22', paddingHorizontal: 13, paddingVertical: 9, borderRadius: 13, alignItems: 'center' },
+    countValue: { color: colors.onPrimary, fontWeight: '900', fontSize: 17 },
+    countLabel: { color: colors.primarySoftText, fontWeight: '700', fontSize: 9 },
+    chartCard: { marginTop: 16, backgroundColor: colors.surface, borderRadius: 18, borderWidth: 1, borderColor: colors.border, padding: 16 },
+    chart: { marginTop: 17, gap: 14 },
+    barRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    barLabel: { width: 78, color: colors.ink, fontSize: 10, fontWeight: '700' },
+    barTrack: { flex: 1, height: 12, borderRadius: 8, backgroundColor: colors.track, overflow: 'hidden' },
+    barFill: { height: '100%', borderRadius: 8, backgroundColor: colors.primaryMid },
+    barAmount: { width: 74, textAlign: 'right', color: colors.muted, fontSize: 9, fontWeight: '700' },
+    rangeCaption: { color: colors.muted, fontSize: 10, marginTop: 16 },
+    empty: { paddingVertical: 28, alignItems: 'center' },
+    emptyTitle: { color: colors.ink, fontWeight: '800', fontSize: 13, marginBottom: 5 },
+    emptyText: { color: colors.muted, fontSize: 11 },
+    note: { color: colors.muted, fontSize: 10, lineHeight: 15, marginTop: 14 },
+  });

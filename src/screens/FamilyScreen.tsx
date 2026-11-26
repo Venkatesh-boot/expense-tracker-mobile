@@ -10,7 +10,8 @@ import {
   View,
 } from 'react-native';
 import type { Expense, FamilyMember } from '../models';
-import { COLORS } from '../theme';
+import { useTheme, useThemedStyles } from '../theme';
+import type { ThemeColors } from '../theme';
 import { AppIcon } from '../components/AppIcon';
 import { ChoiceChip } from '../components/ChoiceChip';
 import { SectionHeading } from '../components/SectionHeading';
@@ -32,6 +33,8 @@ export function FamilyScreen({
   onRenameMember,
   onRemoveMember,
 }: FamilyScreenProps) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const [name, setName] = useState('');
   const [saving, setSaving] = useState(false);
   const [renamingMember, setRenamingMember] = useState<FamilyMember | null>(null);
@@ -135,7 +138,7 @@ export function FamilyScreen({
           value={name}
           onChangeText={setName}
           placeholder="Family member name"
-          placeholderTextColor="#9AA6B2"
+          placeholderTextColor={colors.placeholder}
           maxLength={100}
           returnKeyType="done"
           onSubmitEditing={() => void add()}
@@ -173,7 +176,7 @@ export function FamilyScreen({
                   accessibilityRole="button"
                   accessibilityLabel={`Rename ${member.name}`}
                 >
-                  <AppIcon name="edit" color={COLORS.primary} size={15} />
+                  <AppIcon name="edit" color={colors.primary} size={15} />
                 </Pressable>
                 {!isSelf && members.length > 1 ? (
                   <Pressable
@@ -182,7 +185,7 @@ export function FamilyScreen({
                     accessibilityRole="button"
                     accessibilityLabel={`Remove ${member.name}`}
                   >
-                    <AppIcon name="trash" color={COLORS.danger} size={15} />
+                    <AppIcon name="trash" color={colors.danger} size={15} />
                   </Pressable>
                 ) : null}
               </View>
@@ -212,7 +215,7 @@ export function FamilyScreen({
               value={renameText}
               onChangeText={setRenameText}
               placeholder="Name"
-              placeholderTextColor="#9AA6B2"
+              placeholderTextColor={colors.placeholder}
               maxLength={100}
               autoFocus
             />
@@ -279,61 +282,62 @@ export function FamilyScreen({
   );
 }
 
-const styles = StyleSheet.create({
-  pageContent: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 28 },
-  eyebrow: { color: COLORS.muted, fontSize: 10, fontWeight: '800', letterSpacing: 1.5, marginBottom: 6 },
-  pageTitle: { color: COLORS.ink, fontSize: 26, fontWeight: '800', marginBottom: 4 },
-  pageSubtitle: { color: COLORS.muted, fontSize: 13, marginBottom: 18 },
-  addMemberCard: { backgroundColor: COLORS.white, borderWidth: 1, borderColor: COLORS.border, borderRadius: 18, padding: 16 },
-  cardTitle: { color: COLORS.ink, fontWeight: '800', fontSize: 15, marginBottom: 8 },
-  input: {
-    minHeight: 48,
-    backgroundColor: COLORS.white,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 13,
-    paddingHorizontal: 13,
-    color: COLORS.ink,
-    fontSize: 14,
-  },
-  primaryButton: { backgroundColor: COLORS.primary, minHeight: 50, borderRadius: 15, justifyContent: 'center', alignItems: 'center', marginTop: 14, paddingHorizontal: 16 },
-  primaryButtonText: { color: COLORS.white, fontWeight: '800', fontSize: 15 },
-  disabledButton: { opacity: 0.6 },
-  card: { backgroundColor: COLORS.white, borderRadius: 18, paddingHorizontal: 15, paddingVertical: 4, borderWidth: 1, borderColor: COLORS.border },
-  memberRow: { flexDirection: 'row', alignItems: 'center', minHeight: 68, borderBottomWidth: 1, borderBottomColor: COLORS.border },
-  noBorder: { borderBottomWidth: 0 },
-  avatar: { width: 38, height: 38, borderRadius: 14, backgroundColor: '#F0EAF8', alignItems: 'center', justifyContent: 'center', marginRight: 11 },
-  avatarText: { color: '#674D8C', fontWeight: '800' },
-  memberInfo: { flex: 1, marginRight: 8 },
-  memberName: { color: COLORS.ink, fontSize: 14, fontWeight: '700' },
-  memberMeta: { color: COLORS.muted, fontSize: 11, marginTop: 2 },
-  memberActions: { flexDirection: 'row', gap: 8 },
-  iconButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 11,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconButtonDanger: {
-    borderColor: '#E9C6C6',
-    backgroundColor: '#FDF4F4',
-  },
-  infoCard: { padding: 16, borderRadius: 18, backgroundColor: '#EEF4FA', marginTop: 16 },
-  infoTitle: { color: COLORS.ink, fontWeight: '800', fontSize: 14, marginBottom: 7 },
-  infoText: { color: COLORS.muted, fontSize: 12, lineHeight: 18 },
-  modalBackdrop: { flex: 1, backgroundColor: '#14203377', justifyContent: 'center', padding: 22 },
-  modalCard: { backgroundColor: COLORS.white, borderRadius: 20, padding: 18 },
-  modalTitle: { color: COLORS.ink, fontSize: 17, fontWeight: '800', marginBottom: 10 },
-  modalCopy: { color: COLORS.muted, fontSize: 13, lineHeight: 19, marginBottom: 12 },
-  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 },
-  modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 16 },
-  modalCancel: { paddingHorizontal: 14, paddingVertical: 11, borderRadius: 12 },
-  modalCancelText: { color: COLORS.muted, fontWeight: '700', fontSize: 13 },
-  modalSave: { backgroundColor: COLORS.primary, paddingHorizontal: 18, paddingVertical: 11, borderRadius: 12 },
-  modalDanger: { backgroundColor: COLORS.danger, paddingHorizontal: 18, paddingVertical: 11, borderRadius: 12 },
-  modalSaveText: { color: COLORS.white, fontWeight: '800', fontSize: 13 },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    pageContent: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 28 },
+    eyebrow: { color: colors.muted, fontSize: 10, fontWeight: '800', letterSpacing: 1.5, marginBottom: 6 },
+    pageTitle: { color: colors.ink, fontSize: 26, fontWeight: '800', marginBottom: 4 },
+    pageSubtitle: { color: colors.muted, fontSize: 13, marginBottom: 18 },
+    addMemberCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 18, padding: 16 },
+    cardTitle: { color: colors.ink, fontWeight: '800', fontSize: 15, marginBottom: 8 },
+    input: {
+      minHeight: 48,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 13,
+      paddingHorizontal: 13,
+      color: colors.ink,
+      fontSize: 14,
+    },
+    primaryButton: { backgroundColor: colors.primary, minHeight: 50, borderRadius: 15, justifyContent: 'center', alignItems: 'center', marginTop: 14, paddingHorizontal: 16 },
+    primaryButtonText: { color: colors.onPrimary, fontWeight: '800', fontSize: 15 },
+    disabledButton: { opacity: 0.6 },
+    card: { backgroundColor: colors.surface, borderRadius: 18, paddingHorizontal: 15, paddingVertical: 4, borderWidth: 1, borderColor: colors.border },
+    memberRow: { flexDirection: 'row', alignItems: 'center', minHeight: 68, borderBottomWidth: 1, borderBottomColor: colors.border },
+    noBorder: { borderBottomWidth: 0 },
+    avatar: { width: 38, height: 38, borderRadius: 14, backgroundColor: colors.purpleLight, alignItems: 'center', justifyContent: 'center', marginRight: 11 },
+    avatarText: { color: colors.purple, fontWeight: '800' },
+    memberInfo: { flex: 1, marginRight: 8 },
+    memberName: { color: colors.ink, fontSize: 14, fontWeight: '700' },
+    memberMeta: { color: colors.muted, fontSize: 11, marginTop: 2 },
+    memberActions: { flexDirection: 'row', gap: 8 },
+    iconButton: {
+      width: 36,
+      height: 36,
+      borderRadius: 11,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.background,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    iconButtonDanger: {
+      borderColor: colors.dangerBorder,
+      backgroundColor: colors.dangerLight,
+    },
+    infoCard: { padding: 16, borderRadius: 18, backgroundColor: colors.surfaceTint, marginTop: 16 },
+    infoTitle: { color: colors.ink, fontWeight: '800', fontSize: 14, marginBottom: 7 },
+    infoText: { color: colors.muted, fontSize: 12, lineHeight: 18 },
+    modalBackdrop: { flex: 1, backgroundColor: colors.backdrop, justifyContent: 'center', padding: 22 },
+    modalCard: { backgroundColor: colors.surface, borderRadius: 20, padding: 18, borderWidth: 1, borderColor: colors.border },
+    modalTitle: { color: colors.ink, fontSize: 17, fontWeight: '800', marginBottom: 10 },
+    modalCopy: { color: colors.muted, fontSize: 13, lineHeight: 19, marginBottom: 12 },
+    chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 },
+    modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 16 },
+    modalCancel: { paddingHorizontal: 14, paddingVertical: 11, borderRadius: 12 },
+    modalCancelText: { color: colors.muted, fontWeight: '700', fontSize: 13 },
+    modalSave: { backgroundColor: colors.primary, paddingHorizontal: 18, paddingVertical: 11, borderRadius: 12 },
+    modalDanger: { backgroundColor: colors.danger, paddingHorizontal: 18, paddingVertical: 11, borderRadius: 12 },
+    modalSaveText: { color: colors.onPrimary, fontWeight: '800', fontSize: 13 },
+  });

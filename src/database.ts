@@ -5,6 +5,7 @@ import type {
   Expense,
   FamilyMember,
   Preferences,
+  ThemePreference,
 } from './models';
 import { createId } from './models';
 
@@ -142,11 +143,14 @@ export async function loadPreferences(): Promise<Preferences> {
   const members = await loadMembers();
   const selfId = values.selfId || members[0]?.id || '';
   const parsedBudget = values.monthlyBudget ? Number(values.monthlyBudget) : NaN;
+  const theme: ThemePreference =
+    values.theme === 'dark' || values.theme === 'light' ? values.theme : 'auto';
   return {
     currency: (values.currency || 'INR') as CurrencyCode,
     displayName: values.displayName || 'You',
     selfId,
     monthlyBudget: Number.isFinite(parsedBudget) && parsedBudget > 0 ? parsedBudget : undefined,
+    theme,
   };
 }
 
@@ -160,11 +164,16 @@ export async function savePreferences(
     preferences.monthlyBudget > 0
       ? String(preferences.monthlyBudget)
       : '';
+  const themeValue: ThemePreference =
+    preferences.theme === 'dark' || preferences.theme === 'light'
+      ? preferences.theme
+      : 'auto';
   await getDatabase().withTransactionAsync(async () => {
     await setSetting('currency', preferences.currency);
     await setSetting('displayName', trimmedName);
     await setSetting('selfId', preferences.selfId);
     await setSetting('monthlyBudget', budgetValue);
+    await setSetting('theme', themeValue);
     const ownMember = await getDatabase().getFirstAsync<{ id: string }>(
       'SELECT id FROM members WHERE id = ?',
       preferences.selfId

@@ -18,7 +18,9 @@ export type AppIconName =
   | 'trash'
   | 'trend'
   | 'target'
-  | 'wallet';
+  | 'wallet'
+  | 'sun'
+  | 'moon';
 
 /**
  * Pure React Native geometric icon primitives for consistent cross-platform rendering
@@ -320,6 +322,59 @@ export function AppIcon({
           >
             <View style={{ width: 3 * s, height: 3 * s, borderRadius: 1.5 * s, backgroundColor: color }} />
           </View>
+        </View>
+      );
+    case 'sun':
+      return (
+        <View style={[styles.box, { width: size, height: size }]}>
+          <View
+            style={{
+              width: 8 * s,
+              height: 8 * s,
+              borderRadius: 4 * s,
+              borderWidth: 1.8 * s,
+              borderColor: color,
+            }}
+          />
+          {[0, 45, 90, 135].map((deg) => (
+            <View
+              key={deg}
+              style={{
+                position: 'absolute',
+                width: 15 * s,
+                height: 1.6 * s,
+                borderRadius: s,
+                backgroundColor: color,
+                transform: [{ rotate: `${deg}deg` }],
+                opacity: 0.75,
+              }}
+            />
+          ))}
+          <View
+            style={{
+              position: 'absolute',
+              width: 7 * s,
+              height: 7 * s,
+              borderRadius: 3.5 * s,
+              backgroundColor: color,
+            }}
+          />
+        </View>
+      );
+    case 'moon':
+      return (
+        <View style={[styles.box, { width: size, height: size }]}>
+          <View
+            style={{
+              width: 12 * s,
+              height: 12 * s,
+              borderRadius: 6 * s,
+              borderLeftWidth: 3.2 * s,
+              borderBottomWidth: 3.2 * s,
+              borderColor: color,
+              transform: [{ rotate: '35deg' }],
+            }}
+          />
         </View>
       );
   }

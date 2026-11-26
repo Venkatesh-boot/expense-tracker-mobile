@@ -2,7 +2,8 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { CurrencyCode, Expense } from '../models';
 import { displayDate, formatMoney } from '../models';
-import { COLORS } from '../theme';
+import { useTheme, useThemedStyles } from '../theme';
+import type { ThemeColors } from '../theme';
 
 export function ExpenseRow({
   expense,
@@ -19,7 +20,13 @@ export function ExpenseRow({
   onDelete: (expense: Expense) => void;
   last: boolean;
 }) {
+  const { colors, categoryColors } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const hasNotes = expense.notes.trim().length > 0;
+  const badgeColor = categoryColors[expense.category] ?? {
+    bg: colors.primaryLight,
+    fg: colors.primary,
+  };
 
   return (
     <Pressable
@@ -28,8 +35,10 @@ export function ExpenseRow({
       accessibilityRole={onPress ? 'button' : undefined}
       accessibilityLabel={`${expense.title}, ${formatMoney(expense.amount, currency)}`}
     >
-      <View style={styles.expenseIcon}>
-        <Text style={styles.expenseIconText}>{expense.category.slice(0, 1).toUpperCase()}</Text>
+      <View style={[styles.expenseIcon, { backgroundColor: badgeColor.bg }]}>
+        <Text style={[styles.expenseIconText, { color: badgeColor.fg }]}>
+          {expense.category.slice(0, 1).toUpperCase()}
+        </Text>
       </View>
       <View style={styles.expenseDescription}>
         <Text style={styles.expenseTitle} numberOfLines={1}>{expense.title}</Text>
@@ -60,63 +69,64 @@ export function ExpenseRow({
   );
 }
 
-const styles = StyleSheet.create({
-  expenseRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    minHeight: 78,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    paddingVertical: 11,
-  },
-  noBorder: {
-    borderBottomWidth: 0,
-  },
-  expenseIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 14,
-    backgroundColor: COLORS.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 11,
-  },
-  expenseIconText: {
-    color: COLORS.primary,
-    fontWeight: '800',
-  },
-  expenseDescription: {
-    flex: 1,
-    marginRight: 6,
-  },
-  expenseTitle: {
-    color: COLORS.ink,
-    fontWeight: '700',
-    fontSize: 13,
-    marginBottom: 4,
-  },
-  expenseMeta: {
-    color: COLORS.muted,
-    fontSize: 10,
-  },
-  expenseNotes: {
-    color: COLORS.primary,
-    fontSize: 11,
-    marginTop: 4,
-  },
-  expenseAmountWrap: {
-    alignItems: 'flex-end',
-    minWidth: 72,
-  },
-  expenseAmount: {
-    color: COLORS.ink,
-    fontWeight: '800',
-    fontSize: 12,
-  },
-  deleteText: {
-    color: COLORS.danger,
-    fontSize: 10,
-    fontWeight: '600',
-    marginTop: 4,
-  },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    expenseRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      minHeight: 78,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      paddingVertical: 11,
+    },
+    noBorder: {
+      borderBottomWidth: 0,
+    },
+    expenseIcon: {
+      width: 40,
+      height: 40,
+      borderRadius: 14,
+      backgroundColor: colors.primaryLight,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: 11,
+    },
+    expenseIconText: {
+      color: colors.primary,
+      fontWeight: '800',
+    },
+    expenseDescription: {
+      flex: 1,
+      marginRight: 6,
+    },
+    expenseTitle: {
+      color: colors.ink,
+      fontWeight: '700',
+      fontSize: 13,
+      marginBottom: 4,
+    },
+    expenseMeta: {
+      color: colors.muted,
+      fontSize: 10,
+    },
+    expenseNotes: {
+      color: colors.primary,
+      fontSize: 11,
+      marginTop: 4,
+    },
+    expenseAmountWrap: {
+      alignItems: 'flex-end',
+      minWidth: 72,
+    },
+    expenseAmount: {
+      color: colors.ink,
+      fontWeight: '800',
+      fontSize: 12,
+    },
+    deleteText: {
+      color: colors.danger,
+      fontSize: 10,
+      fontWeight: '600',
+      marginTop: 4,
+    },
+  });
