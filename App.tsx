@@ -275,6 +275,9 @@ export default function App() {
               preferences={preferences}
               onAddExpense={() => openAddExpense('home')}
               onShowExpenses={() => setScreen('expenses')}
+              onOpenReports={() => setScreen('reports')}
+              onOpenFamily={() => setScreen('family')}
+              onSavePreferences={saveSettings}
               onSelectExpense={setSelectedExpense}
               onDeleteExpense={confirmDeleteExpense}
             />

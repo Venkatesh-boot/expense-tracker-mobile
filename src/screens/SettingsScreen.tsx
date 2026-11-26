@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native';
 import type { CurrencyCode, Preferences } from '../models';
-import { CURRENCIES } from '../models';
+import { CURRENCIES, CURRENCY_SYMBOLS, sanitizeQuantityInput } from '../models';
 import { COLORS } from '../theme';
 import { ChoiceChip } from '../components/ChoiceChip';
 import { SectionHeading } from '../components/SectionHeading';
@@ -32,22 +32,40 @@ export function SettingsScreen({
 }: SettingsScreenProps) {
   const [displayName, setDisplayName] = useState(preferences.displayName);
   const [currency, setCurrency] = useState<CurrencyCode>(preferences.currency);
+  const [budgetText, setBudgetText] = useState(
+    preferences.monthlyBudget ? String(preferences.monthlyBudget) : ''
+  );
   const [saving, setSaving] = useState(false);
   const [transferring, setTransferring] = useState(false);
 
   useEffect(() => {
     setDisplayName(preferences.displayName);
     setCurrency(preferences.currency);
-  }, [preferences.displayName, preferences.currency]);
+    setBudgetText(preferences.monthlyBudget ? String(preferences.monthlyBudget) : '');
+  }, [preferences.displayName, preferences.currency, preferences.monthlyBudget]);
 
   const save = async () => {
     if (!displayName.trim()) {
       Alert.alert('Enter a name', 'Your profile name cannot be empty.');
       return;
     }
+    const trimmedBudget = budgetText.trim();
+    const parsedBudget = trimmedBudget ? Number(trimmedBudget) : undefined;
+    if (
+      trimmedBudget &&
+      (!Number.isFinite(parsedBudget) || (parsedBudget ?? 0) <= 0 || (parsedBudget ?? 0) > 100_000_000)
+    ) {
+      Alert.alert('Check monthly budget', 'Enter a positive budget amount, or leave it blank.');
+      return;
+    }
     setSaving(true);
     try {
-      await onSave({ ...preferences, displayName: displayName.trim(), currency });
+      await onSave({
+        ...preferences,
+        displayName: displayName.trim(),
+        currency,
+        monthlyBudget: parsedBudget,
+      });
       Alert.alert('Settings saved', 'Your preferences are stored on this device.');
     } catch (error) {
       Alert.alert('Could not save settings', error instanceof Error ? error.message : 'Please try again.');
@@ -100,6 +118,19 @@ export function SettingsScreen({
             />
           ))}
         </View>
+        <Text style={styles.inputLabel}>
+          Monthly budget ({CURRENCY_SYMBOLS[currency]}, optional)
+        </Text>
+        <TextInput
+          style={styles.input}
+          value={budgetText}
+          onChangeText={(value) => setBudgetText(sanitizeQuantityInput(value))}
+          placeholder="e.g. 25000 (leave blank for none)"
+          placeholderTextColor="#9AA6B2"
+          keyboardType="decimal-pad"
+          inputMode="decimal"
+          accessibilityLabel="Monthly budget"
+        />
         <Pressable
           style={[styles.primaryButton, saving && styles.disabledButton]}
           onPress={() => void save()}

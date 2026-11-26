@@ -22,6 +22,66 @@ export const SUBCATEGORIES: Record<ExpenseCategory, readonly string[]> = {
   Other: ['General', 'Education', 'Entertainment', 'Gifts'],
 };
 
+export const UNITS = [
+  'pc',
+  'kg',
+  'g',
+  'L',
+  'mL',
+  'pack',
+  'box',
+  'bottle',
+  'dozen',
+  'unit',
+  'item',
+  'km',
+] as const;
+
+export type ExpenseUnit = (typeof UNITS)[number];
+
+export const UNIT_LABELS: Record<ExpenseUnit, string> = {
+  pc: 'Piece (pc)',
+  kg: 'Kilogram (kg)',
+  g: 'Gram (g)',
+  L: 'Liter (L)',
+  mL: 'Milliliter (mL)',
+  pack: 'Pack (pack)',
+  box: 'Box (box)',
+  bottle: 'Bottle (bottle)',
+  dozen: 'Dozen (dozen)',
+  unit: 'Unit (unit)',
+  item: 'Item (item)',
+  km: 'Kilometer (km)',
+};
+
+/** Strips non-numeric characters from a quantity input while keeping at most one decimal point. */
+export function sanitizeQuantityInput(value: string): string {
+  const cleaned = value.replace(/[^0-9.]/g, '');
+  const dotIndex = cleaned.indexOf('.');
+  if (dotIndex === -1) return cleaned;
+  return `${cleaned.slice(0, dotIndex + 1)}${cleaned.slice(dotIndex + 1).replace(/\./g, '')}`;
+}
+
+/** Builds unit dropdown options, preserving any custom or legacy unit on an existing expense. */
+export function buildUnitOptions(
+  currentUnit?: string
+): { value: string; label: string; shortLabel: string }[] {
+  const options: { value: string; label: string; shortLabel: string }[] = UNITS.map((unit) => ({
+    value: unit,
+    label: UNIT_LABELS[unit],
+    shortLabel: unit,
+  }));
+  const trimmed = currentUnit?.trim();
+  if (trimmed && !options.some((option) => option.value === trimmed)) {
+    options.push({
+      value: trimmed,
+      label: trimmed,
+      shortLabel: trimmed,
+    });
+  }
+  return options;
+}
+
 export type CurrencyCode = 'INR' | 'USD' | 'EUR' | 'GBP';
 
 export type Expense = {
@@ -47,6 +107,7 @@ export type Preferences = {
   currency: CurrencyCode;
   displayName: string;
   selfId: string;
+  monthlyBudget?: number;
 };
 
 export type BackupDocument = {

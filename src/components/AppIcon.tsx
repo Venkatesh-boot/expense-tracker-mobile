@@ -16,7 +16,9 @@ export type AppIconName =
   | 'check'
   | 'edit'
   | 'trash'
-  | 'trend';
+  | 'trend'
+  | 'target'
+  | 'wallet';
 
 /**
  * Pure React Native geometric icon primitives for consistent cross-platform rendering
@@ -274,6 +276,50 @@ export function AppIcon({
               borderColor: color,
             }}
           />
+        </View>
+      );
+    case 'target':
+      return (
+        <View style={[styles.box, { width: size, height: size }]}>
+          <View
+            style={{
+              width: 14 * s,
+              height: 14 * s,
+              borderRadius: 7 * s,
+              borderWidth: 1.8 * s,
+              borderColor: color,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <View
+              style={{
+                width: 6 * s,
+                height: 6 * s,
+                borderRadius: 3 * s,
+                backgroundColor: color,
+              }}
+            />
+          </View>
+        </View>
+      );
+    case 'wallet':
+      return (
+        <View style={[styles.box, { width: size, height: size }]}>
+          <View
+            style={{
+              width: 14 * s,
+              height: 11 * s,
+              borderWidth: 1.8 * s,
+              borderColor: color,
+              borderRadius: 3 * s,
+              justifyContent: 'center',
+              alignItems: 'flex-end',
+              paddingRight: 2 * s,
+            }}
+          >
+            <View style={{ width: 3 * s, height: 3 * s, borderRadius: 1.5 * s, backgroundColor: color }} />
+          </View>
         </View>
       );
   }

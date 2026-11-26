@@ -12,7 +12,14 @@ import {
   View,
 } from 'react-native';
 import type { Expense, ExpenseCategory, FamilyMember, Preferences } from '../models';
-import { CATEGORIES, createId, SUBCATEGORIES, todayString } from '../models';
+import {
+  buildUnitOptions,
+  CATEGORIES,
+  createId,
+  sanitizeQuantityInput,
+  SUBCATEGORIES,
+  todayString,
+} from '../models';
 import type { ReceiptScanResult } from '../receipt';
 import { DatePickerField, Dropdown, parseDate } from '../controls';
 import { COLORS } from '../theme';
@@ -227,7 +234,7 @@ export function AddExpenseScreen({
     ) {
       Alert.alert(
         'Check quantity and unit',
-        'Enter a positive quantity and a unit of up to 24 characters for each expense.'
+        'Enter a positive quantity and select a unit for each expense.'
       );
       return;
     }
@@ -377,24 +384,30 @@ export function AddExpenseScreen({
                     style={[styles.input, styles.receiptItemQuantity]}
                     value={item.quantityText}
                     onChangeText={(value) =>
-                      updateReceiptItem(item.id, (row) => ({ ...row, quantityText: value }))
+                      updateReceiptItem(item.id, (row) => ({
+                        ...row,
+                        quantityText: sanitizeQuantityInput(value),
+                      }))
                     }
                     placeholder="Qty"
                     placeholderTextColor="#9AA6B2"
                     keyboardType="decimal-pad"
+                    inputMode="decimal"
                     accessibilityLabel={`Bill item ${index + 1} quantity`}
                   />
-                  <TextInput
-                    style={[styles.input, styles.receiptItemUnit]}
-                    value={item.unit}
-                    onChangeText={(value) =>
-                      updateReceiptItem(item.id, (row) => ({ ...row, unit: value }))
-                    }
-                    placeholder="Unit"
-                    placeholderTextColor="#9AA6B2"
-                    maxLength={24}
-                    accessibilityLabel={`Bill item ${index + 1} unit`}
-                  />
+                  <View style={styles.receiptItemUnit}>
+                    <Dropdown
+                      label=""
+                      inline
+                      modalTitle={`Bill item ${index + 1} unit`}
+                      value={item.unit}
+                      options={buildUnitOptions(item.unit)}
+                      onChange={(value) =>
+                        updateReceiptItem(item.id, (row) => ({ ...row, unit: value }))
+                      }
+                      placeholder="Unit"
+                    />
+                  </View>
                   <TextInput
                     style={[styles.input, styles.receiptItemAmount]}
                     value={item.amount}
@@ -472,23 +485,26 @@ export function AddExpenseScreen({
             <Text style={styles.inputLabel}>Quantity and unit</Text>
             <View style={styles.manualQuantityRow}>
               <TextInput
-                style={[styles.input, styles.receiptItemQuantity]}
+                style={[styles.input, styles.manualQuantityInput]}
                 value={quantity}
-                onChangeText={setQuantity}
+                onChangeText={(value) => setQuantity(sanitizeQuantityInput(value))}
                 placeholder="Quantity"
                 placeholderTextColor="#9AA6B2"
                 keyboardType="decimal-pad"
+                inputMode="decimal"
                 accessibilityLabel="Expense quantity"
               />
-              <TextInput
-                style={[styles.input, styles.receiptItemUnit]}
-                value={unit}
-                onChangeText={setUnit}
-                placeholder="Unit (e.g. kg, L, km)"
-                placeholderTextColor="#9AA6B2"
-                maxLength={24}
-                accessibilityLabel="Expense unit"
-              />
+              <View style={styles.flex}>
+                <Dropdown
+                  label=""
+                  inline
+                  modalTitle="Unit"
+                  value={unit}
+                  options={buildUnitOptions(unit)}
+                  onChange={setUnit}
+                  placeholder="Unit"
+                />
+              </View>
             </View>
 
             <Dropdown
@@ -608,7 +624,7 @@ const styles = StyleSheet.create({
   receiptItemCategoryRow: { flexDirection: 'row', gap: 8 },
   receiptItemTitle: { flex: 1 },
   receiptItemQuantity: { width: 72, paddingHorizontal: 10 },
-  receiptItemUnit: { width: 78, paddingHorizontal: 10 },
+  receiptItemUnit: { width: 104 },
   receiptItemAmount: { flex: 1 },
   removeItemButton: {
     width: 42,
@@ -621,6 +637,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   manualQuantityRow: { flexDirection: 'row', gap: 8 },
+  manualQuantityInput: { flex: 1 },
   inputLabel: { color: COLORS.ink, fontWeight: '700', fontSize: 12, marginBottom: 7, marginTop: 12 },
   input: {
     minHeight: 48,

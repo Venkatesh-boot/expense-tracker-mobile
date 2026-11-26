@@ -1,6 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { displayDate, formatMoney, getCurrencyLocale, todayString } from '../src/domain';
+import {
+  buildUnitOptions,
+  displayDate,
+  formatMoney,
+  getCurrencyLocale,
+  sanitizeQuantityInput,
+  todayString,
+} from '../src/domain';
 
 test('formatMoney formats each currency with its appropriate locale grouping', () => {
   assert.equal(formatMoney(100000, 'INR'), '₹1,00,000.00');
@@ -25,4 +32,20 @@ test('displayDate validates calendar dates and leaves invalid strings untouched'
 test('todayString formats local YYYY-MM-DD', () => {
   const sample = new Date(2026, 0, 5);
   assert.equal(todayString(sample), '2026-01-05');
+});
+
+test('sanitizeQuantityInput strips non-numeric characters and keeps a single decimal point', () => {
+  assert.equal(sanitizeQuantityInput('abc'), '');
+  assert.equal(sanitizeQuantityInput('12abc.34xyz'), '12.34');
+  assert.equal(sanitizeQuantityInput('1.2.3'), '1.23');
+  assert.equal(sanitizeQuantityInput('-5.5 kg'), '5.5');
+});
+
+test('buildUnitOptions includes standard units and preserves custom legacy units', () => {
+  const standard = buildUnitOptions('kg');
+  assert.ok(standard.some((option) => option.value === 'kg' && option.shortLabel === 'kg'));
+  assert.equal(standard.filter((option) => option.value === 'kg').length, 1);
+
+  const withCustom = buildUnitOptions('cup');
+  assert.ok(withCustom.some((option) => option.value === 'cup' && option.label === 'cup'));
 });

@@ -17,6 +17,7 @@ import { AppIcon } from './components/AppIcon';
 export type DropdownOption<T extends string> = {
   label: string;
   value: T;
+  shortLabel?: string;
 };
 
 export function Dropdown<T extends string>({
@@ -26,6 +27,8 @@ export function Dropdown<T extends string>({
   onChange,
   placeholder = 'Select',
   compact = false,
+  inline = false,
+  modalTitle,
 }: {
   label: string;
   value: T;
@@ -33,20 +36,24 @@ export function Dropdown<T extends string>({
   onChange: (value: T) => void;
   placeholder?: string;
   compact?: boolean;
+  inline?: boolean;
+  modalTitle?: string;
 }) {
   const [open, setOpen] = useState(false);
   const selected = options.find((option) => option.value === value);
+  const displayLabel = selected?.shortLabel ?? selected?.label;
+  const resolvedTitle = label || modalTitle || 'Choose an option';
   return (
-    <View style={compact ? styles.compactField : styles.field}>
+    <View style={compact || inline ? styles.compactField : styles.field}>
       {label ? <Text style={styles.label}>{label}</Text> : null}
       <Pressable
         style={[styles.dropdown, compact && styles.dropdownCompact]}
         onPress={() => setOpen(true)}
         accessibilityRole="button"
-        accessibilityLabel={`${label || 'Option'}: ${selected?.label || placeholder}`}
+        accessibilityLabel={`${label || modalTitle || 'Option'}: ${selected?.label || placeholder}`}
       >
         <Text style={[styles.dropdownValue, compact && styles.dropdownValueCompact, !selected && styles.placeholder]} numberOfLines={1}>
-          {selected?.label || placeholder}
+          {displayLabel || placeholder}
         </Text>
         <View style={styles.iconRight}>
           <AppIcon name="chevronDown" color={COLORS.primary} size={compact ? 14 : 16} />
@@ -60,7 +67,7 @@ export function Dropdown<T extends string>({
       >
         <Pressable style={styles.modalBackdrop} onPress={() => setOpen(false)}>
           <Pressable style={styles.optionsCard} onPress={() => undefined}>
-            <Text style={styles.optionsTitle}>{label || 'Choose an option'}</Text>
+            <Text style={styles.optionsTitle}>{resolvedTitle}</Text>
             <ScrollView style={styles.optionsList} keyboardShouldPersistTaps="handled">
               {options.map((option) => (
                 <Pressable

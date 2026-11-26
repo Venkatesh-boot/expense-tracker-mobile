@@ -141,10 +141,12 @@ export async function loadPreferences(): Promise<Preferences> {
   const values = await readSettings();
   const members = await loadMembers();
   const selfId = values.selfId || members[0]?.id || '';
+  const parsedBudget = values.monthlyBudget ? Number(values.monthlyBudget) : NaN;
   return {
     currency: (values.currency || 'INR') as CurrencyCode,
     displayName: values.displayName || 'You',
     selfId,
+    monthlyBudget: Number.isFinite(parsedBudget) && parsedBudget > 0 ? parsedBudget : undefined,
   };
 }
 
@@ -152,10 +154,17 @@ export async function savePreferences(
   preferences: Preferences
 ): Promise<void> {
   const trimmedName = preferences.displayName.trim();
+  const budgetValue =
+    typeof preferences.monthlyBudget === 'number' &&
+    Number.isFinite(preferences.monthlyBudget) &&
+    preferences.monthlyBudget > 0
+      ? String(preferences.monthlyBudget)
+      : '';
   await getDatabase().withTransactionAsync(async () => {
     await setSetting('currency', preferences.currency);
     await setSetting('displayName', trimmedName);
     await setSetting('selfId', preferences.selfId);
+    await setSetting('monthlyBudget', budgetValue);
     const ownMember = await getDatabase().getFirstAsync<{ id: string }>(
       'SELECT id FROM members WHERE id = ?',
       preferences.selfId
