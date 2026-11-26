@@ -15,6 +15,7 @@ export function ExpenseDetailModal({
   onClose,
   onEdit,
   onDelete,
+  onViewPriceHistory,
 }: {
   expense: Expense | null;
   memberName: string;
@@ -22,6 +23,7 @@ export function ExpenseDetailModal({
   onClose: () => void;
   onEdit: (expense: Expense) => void;
   onDelete: (expense: Expense) => void;
+  onViewPriceHistory?: (expense: Expense) => void;
 }) {
   const { colors, categoryColors } = useTheme();
   const styles = useThemedStyles(createStyles);
@@ -65,7 +67,19 @@ export function ExpenseDetailModal({
 
           <ScrollView style={styles.body} showsVerticalScrollIndicator={false}>
             <Text style={styles.title}>{expense.title}</Text>
-            <Text style={styles.amount}>{formatMoney(expense.amount, currency)}</Text>
+            <View style={styles.amountRow}>
+              <Text style={styles.amount}>{formatMoney(expense.amount, currency)}</Text>
+              {onViewPriceHistory ? (
+                <Pressable
+                  style={styles.priceHistoryPill}
+                  onPress={() => onViewPriceHistory(expense)}
+                  accessibilityRole="button"
+                >
+                  <AppIcon name="trend" color={colors.primary} size={13} />
+                  <Text style={styles.priceHistoryText}>Price history</Text>
+                </Pressable>
+              ) : null}
+            </View>
 
             <View style={styles.detailsGrid}>
               <DetailItem label="Quantity" value={`${expense.quantity} ${expense.unit}`} styles={styles} />
@@ -183,11 +197,33 @@ const createStyles = (colors: ThemeColors) =>
       fontWeight: '800',
       marginBottom: 6,
     },
+    amountRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 10,
+      marginBottom: 16,
+    },
     amount: {
       color: colors.primary,
       fontSize: 26,
       fontWeight: '900',
-      marginBottom: 16,
+    },
+    priceHistoryPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      backgroundColor: colors.primaryLight,
+      borderWidth: 1,
+      borderColor: colors.primaryBorder,
+      borderRadius: 11,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+    },
+    priceHistoryText: {
+      color: colors.primary,
+      fontSize: 11,
+      fontWeight: '800',
     },
     detailsGrid: {
       flexDirection: 'row',

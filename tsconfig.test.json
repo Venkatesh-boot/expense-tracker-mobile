@@ -15,6 +15,7 @@
   "include": [
     "src/domain.ts",
     "src/dashboardUtils.ts",
+    "src/priceUtils.ts",
     "src/receiptParser.ts",
     "src/transferUtils.ts",
     "src/reportUtils.ts",

@@ -17,6 +17,7 @@ import {
   sanitizeQuantityInput,
 } from '../models';
 import { buildDashboardSummary } from '../dashboardUtils';
+import { buildProductPriceHistories } from '../priceUtils';
 import { useTheme, useThemedStyles } from '../theme';
 import type { ThemeColors } from '../theme';
 import { AppIcon } from '../components/AppIcon';
@@ -35,6 +36,7 @@ type DashboardScreenProps = {
   onAddExpense: () => void;
   onShowExpenses: () => void;
   onOpenReports: () => void;
+  onOpenPrices: (productTitle?: string) => void;
   onOpenFamily: () => void;
   onSavePreferences: (preferences: Preferences) => Promise<void>;
   onSelectExpense: (expense: Expense) => void;
@@ -48,6 +50,7 @@ export function DashboardScreen({
   onAddExpense,
   onShowExpenses,
   onOpenReports,
+  onOpenPrices,
   onOpenFamily,
   onSavePreferences,
   onSelectExpense,
@@ -72,6 +75,14 @@ export function DashboardScreen({
   const summary = useMemo(
     () => buildDashboardSummary(expenses, members, preferences),
     [expenses, members, preferences]
+  );
+
+  const priceMovers = useMemo(
+    () =>
+      buildProductPriceHistories(expenses)
+        .filter((item) => item.points.length >= 2)
+        .slice(0, 3),
+    [expenses]
   );
 
   const openBudgetModal = () => {
@@ -291,8 +302,8 @@ export function DashboardScreen({
           [
             ['Add', 'add', onAddExpense, true],
             ['Expenses', 'list', onShowExpenses, false],
+            ['Prices', 'trend', () => onOpenPrices(), false],
             ['Reports', 'chart', onOpenReports, false],
-            ['Family', 'family', onOpenFamily, false],
           ] as [string, AppIconName, () => void, boolean][]
         ).map(([label, icon, onPress, primary]) => (
           <Pressable
@@ -809,6 +820,74 @@ export function DashboardScreen({
         </>
       ) : null}
 
+      {priceMovers.length > 0 ? (
+        <>
+          <SectionHeading
+            title="Product price changes"
+            action="All prices"
+            onAction={() => onOpenPrices()}
+          />
+          <View style={styles.card}>
+            {priceMovers.map((item, index) => (
+              <Pressable
+                key={item.key}
+                style={[styles.topPurchaseRow, index === priceMovers.length - 1 && styles.topPurchaseLast]}
+                onPress={() => onOpenPrices(item.title)}
+                accessibilityRole="button"
+              >
+                <View
+                  style={[
+                    styles.rankBadge,
+                    { backgroundColor: categoryColors[item.category]?.bg ?? colors.primaryLight },
+                  ]}
+                >
+                  <AppIcon
+                    name={getCategoryIcon(item.category)}
+                    color={categoryColors[item.category]?.fg ?? colors.primary}
+                    size={15}
+                  />
+                </View>
+                <View style={styles.flex}>
+                  <Text style={styles.topPurchaseTitle} numberOfLines={1}>
+                    {item.title}
+                  </Text>
+                  <Text style={styles.topPurchaseMeta} numberOfLines={1}>
+                    {formatMoney(item.firstPrice, currency)} → {formatMoney(item.latestPrice, currency)} / {item.unit} · {item.points.length} buys
+                  </Text>
+                </View>
+                <View
+                  style={[
+                    styles.priceMoveBadge,
+                    item.changePercent > 0
+                      ? styles.priceMoveUp
+                      : item.changePercent < 0
+                        ? styles.priceMoveDown
+                        : styles.priceMoveFlat,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.priceMoveText,
+                      item.changePercent > 0
+                        ? styles.priceMoveTextUp
+                        : item.changePercent < 0
+                          ? styles.priceMoveTextDown
+                          : styles.priceMoveTextFlat,
+                    ]}
+                  >
+                    {item.changePercent > 0
+                      ? `↑ ${item.changePercent}%`
+                      : item.changePercent < 0
+                        ? `↓ ${Math.abs(item.changePercent)}%`
+                        : '0%'}
+                  </Text>
+                </View>
+              </Pressable>
+            ))}
+          </View>
+        </>
+      ) : null}
+
       {summary.memberTotals.length > 0 && summary.monthTotal > 0 ? (
         <>
           <SectionHeading title="Family split (this month)" action="Manage" onAction={onOpenFamily} />
@@ -1308,6 +1387,14 @@ const createStyles = (colors: ThemeColors) =>
     topPurchaseTitle: { color: colors.ink, fontSize: 13, fontWeight: '700' },
     topPurchaseMeta: { color: colors.muted, fontSize: 11, marginTop: 2 },
     topPurchaseAmount: { color: colors.ink, fontSize: 14, fontWeight: '800' },
+    priceMoveBadge: { borderRadius: 9, paddingHorizontal: 8, paddingVertical: 4 },
+    priceMoveUp: { backgroundColor: colors.dangerLight },
+    priceMoveDown: { backgroundColor: colors.successLight },
+    priceMoveFlat: { backgroundColor: colors.surfaceTint },
+    priceMoveText: { fontSize: 11, fontWeight: '800' },
+    priceMoveTextUp: { color: colors.danger },
+    priceMoveTextDown: { color: colors.success },
+    priceMoveTextFlat: { color: colors.muted },
 
     equalShareNote: {
       color: colors.muted,

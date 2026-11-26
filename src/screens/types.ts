@@ -1,4 +1,11 @@
-export type AppScreen = 'home' | 'expenses' | 'add' | 'family' | 'reports' | 'settings';
+export type AppScreen =
+  | 'home'
+  | 'expenses'
+  | 'add'
+  | 'family'
+  | 'reports'
+  | 'prices'
+  | 'settings';
 
 export const DASHBOARD_CHART_COLORS = [
   '#2563EB',

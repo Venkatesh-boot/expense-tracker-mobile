@@ -39,6 +39,7 @@ import { DashboardScreen } from './src/screens/DashboardScreen';
 import { ExpensesScreen } from './src/screens/ExpensesScreen';
 import { AddExpenseScreen } from './src/screens/AddExpenseScreen';
 import { FamilyScreen } from './src/screens/FamilyScreen';
+import { PriceTrendsScreen } from './src/screens/PriceTrendsScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
 import type { AppScreen } from './src/screens/types';
 import { ReportsScreen } from './src/reports';
@@ -112,6 +113,7 @@ function AppShell({
   const [menuOpen, setMenuOpen] = useState(false);
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [priceFocusTitle, setPriceFocusTitle] = useState<string | null>(null);
 
   const memberNames = useMemo(
     () => new Map(members.map((member) => [member.id, member.name])),
@@ -280,15 +282,24 @@ function AppShell({
             );
   };
 
+  const openPriceTrends = (productTitle?: string) => {
+    setSelectedExpense(null);
+    setPriceFocusTitle(productTitle ?? null);
+    setScreen('prices');
+  };
+
   const navigate = (nextScreen: AppScreen) => {
     if (nextScreen === 'add') {
-              setEditingExpense(null);
-            setReturnScreen(screen);
+      setEditingExpense(null);
+      setReturnScreen(screen);
     } else {
-              setEditingExpense(null);
+      setEditingExpense(null);
     }
-            setScreen(nextScreen);
-            setMenuOpen(false);
+    if (nextScreen === 'prices') {
+      setPriceFocusTitle(null);
+    }
+    setScreen(nextScreen);
+    setMenuOpen(false);
   };
 
             if (!ready) {
@@ -360,6 +371,7 @@ function AppShell({
                       onAddExpense={() => openAddExpense('home')}
                       onShowExpenses={() => setScreen('expenses')}
                       onOpenReports={() => setScreen('reports')}
+                      onOpenPrices={openPriceTrends}
                       onOpenFamily={() => setScreen('family')}
                       onSavePreferences={saveSettings}
                       onSelectExpense={setSelectedExpense}
@@ -408,6 +420,15 @@ function AppShell({
                       currency={preferences.currency}
                     />
                   )}
+                  {screen === 'prices' && (
+                    <PriceTrendsScreen
+                      expenses={expenses}
+                      members={members}
+                      currency={preferences.currency}
+                      initialProductTitle={priceFocusTitle}
+                      onSelectExpense={setSelectedExpense}
+                    />
+                  )}
                   {screen === 'settings' && (
                     <SettingsScreen
                       preferences={preferences}
@@ -427,6 +448,7 @@ function AppShell({
                   onClose={() => setSelectedExpense(null)}
                   onEdit={openEditExpense}
                   onDelete={confirmDeleteExpense}
+                  onViewPriceHistory={(expense) => openPriceTrends(expense.title)}
                 />
 
                 <Modal
@@ -458,6 +480,7 @@ function AppShell({
                         ['home', 'home', 'Dashboard'],
                         ['add', 'add', 'Add expense'],
                         ['expenses', 'list', 'All expenses'],
+                        ['prices', 'trend', 'Price trends'],
                         ['reports', 'chart', 'Reports'],
                         ['family', 'family', 'Family members'],
                         ['settings', 'settings', 'Settings'],
