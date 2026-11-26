@@ -197,12 +197,12 @@ export function FamilyScreen({
       </View>
 
       <View style={styles.infoCard}>
-        <Text style={styles.infoTitle}>Sync phones on home Wi-Fi</Text>
+        <Text style={styles.infoTitle}>Sync phones via Google Drive</Text>
         <Text style={styles.infoText}>
-          No account or cloud server needed. Sync expenses between family phones directly over the same Wi-Fi using a 4-digit PIN, or import/export backups in Settings.
+          No account or backend server needed. Link one shared file in your Google Drive to keep expenses merged across family phones, or import/export backups in Settings.
         </Text>
         <Pressable style={styles.primaryButton} onPress={onOpenSync}>
-          <Text style={styles.primaryButtonText}>Open Wi-Fi family sync</Text>
+          <Text style={styles.primaryButtonText}>Open Google Drive sync</Text>
         </Pressable>
       </View>
 

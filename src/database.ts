@@ -544,14 +544,44 @@ export async function applyMergedSyncSnapshot(
   });
 }
 
-/** Returns metadata about the most recent completed Wi-Fi sync, if any. */
+/** Saves the linked Google Drive / SAF sync file URI and display name. */
+export async function saveLinkedSyncFile(uri: string, name: string): Promise<void> {
+  const db = getDatabase();
+  await db.withTransactionAsync(async () => {
+    await setSetting('syncFileUri', uri);
+    await setSetting('syncFileName', name);
+  });
+}
+
+/** Clears the linked Drive sync file from local settings. */
+export async function clearLinkedSyncFile(): Promise<void> {
+  const db = getDatabase();
+  await db.withTransactionAsync(async () => {
+    await setSetting('syncFileUri', '');
+    await setSetting('syncFileName', '');
+  });
+}
+
+/** Records a sync completion timestamp without changing rows. */
+export async function recordLastSyncAt(peerName?: string): Promise<void> {
+  await setSetting('lastSyncAt', new Date().toISOString());
+  if (peerName) {
+    await setSetting('lastSyncPeer', peerName);
+  }
+}
+
+/** Returns metadata about the linked Drive sync file and most recent sync. */
 export async function loadLastSyncInfo(): Promise<{
   lastSyncAt: string | null;
   lastSyncPeer: string | null;
+  syncFileUri: string | null;
+  syncFileName: string | null;
 }> {
   const settings = await readSettings();
   return {
     lastSyncAt: settings.lastSyncAt || null,
     lastSyncPeer: settings.lastSyncPeer || null,
+    syncFileUri: settings.syncFileUri || null,
+    syncFileName: settings.syncFileName || null,
   };
 }

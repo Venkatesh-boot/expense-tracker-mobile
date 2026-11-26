@@ -37,6 +37,7 @@ export type AppIconName =
   | 'bolt'
   | 'droplet'
   | 'wifi'
+  | 'cloud'
   | 'phone'
   | 'shield'
   | 'shirt'
@@ -681,6 +682,13 @@ export function AppIcon({
             <View style={{ width: '100%', height: 1.5 * s, backgroundColor: color, marginTop: 3 * s }} />
             <View style={{ width: 4 * s, height: 1.5 * s, backgroundColor: color, marginTop: 2 * s }} />
           </View>
+        </View>
+      );
+    case 'cloud':
+      return (
+        <View style={[styles.box, { width: size, height: size }]}>
+          <View style={{ width: 13.5 * s, height: 7.5 * s, borderWidth: 1.7 * s, borderColor: color, borderRadius: 4 * s, marginTop: 3 * s }} />
+          <View style={{ position: 'absolute', top: 3 * s, left: 4 * s, width: 6.5 * s, height: 6.5 * s, borderRadius: 3.5 * s, borderTopWidth: 1.7 * s, borderLeftWidth: 1.7 * s, borderRightWidth: 1.7 * s, borderColor: color, backgroundColor: 'transparent' }} />
         </View>
       );
   }

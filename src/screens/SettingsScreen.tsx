@@ -167,16 +167,16 @@ export function SettingsScreen({
 
       <SectionHeading title="Backup & export" />
       <View style={styles.infoCard}>
-        <Text style={styles.infoTitle}>Wi-Fi sync & manual backup</Text>
+        <Text style={styles.infoTitle}>Google Drive sync & manual backup</Text>
         <Text style={styles.infoText}>
-          Use 1-tap Wi-Fi sync to merge expenses directly with another phone at home, or export/import JSON backups and CSV spreadsheets manually.
+          Link a shared Google Drive file for 1-tap two-way sync between family phones, or export/import JSON backups and CSV spreadsheets manually.
         </Text>
         {transferring ? (
           <ActivityIndicator color={colors.primary} style={styles.transferSpinner} />
         ) : (
           <View style={styles.transferStack}>
             <Pressable style={styles.secondaryButton} onPress={onOpenSync}>
-              <Text style={styles.secondaryButtonText}>Open Wi-Fi family sync</Text>
+              <Text style={styles.secondaryButtonText}>Open Google Drive sync</Text>
             </Pressable>
             <View style={styles.transferButtons}>
               <Pressable style={styles.secondaryButton} onPress={() => void transfer('export')}>

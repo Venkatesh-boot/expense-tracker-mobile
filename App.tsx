@@ -41,7 +41,7 @@ import { AddExpenseScreen } from './src/screens/AddExpenseScreen';
 import { FamilyScreen } from './src/screens/FamilyScreen';
 import { PriceTrendsScreen } from './src/screens/PriceTrendsScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
-import { WifiSyncScreen } from './src/screens/WifiSyncScreen';
+import { DriveSyncScreen } from './src/screens/DriveSyncScreen';
 import type { AppScreen } from './src/screens/types';
 import { ReportsScreen } from './src/reports';
 import { scanReceipt } from './src/receipt';
@@ -417,7 +417,7 @@ function AppShell({
                     />
                   )}
                   {screen === 'sync' && (
-                    <WifiSyncScreen
+                    <DriveSyncScreen
                       preferences={preferences}
                       onSyncComplete={refresh}
                       onOpenSettings={() => setScreen('settings')}
@@ -494,7 +494,7 @@ function AppShell({
                         ['prices', 'trend', 'Price trends'],
                         ['reports', 'chart', 'Reports'],
                         ['family', 'family', 'Family members'],
-                        ['sync', 'wifi', 'Wi-Fi sync'],
+                        ['sync', 'cloud', 'Google Drive sync'],
                         ['settings', 'settings', 'Settings'],
                       ] as [AppScreen, AppIconName, string][]).map(([target, icon, label]) => {
                         const active = screen === target;
