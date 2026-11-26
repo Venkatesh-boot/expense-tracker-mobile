@@ -1,33 +1,93 @@
-import * as FileSystem from 'expo-file-system/legacy';
+import { Platform } from 'react-native';
+import { File, Paths } from 'expo-file-system';
 import * as DocumentPicker from 'expo-document-picker';
 import * as Sharing from 'expo-sharing';
-import { CATEGORIES, CURRENCIES, SUBCATEGORIES } from './models';
-import type {
-  BackupDocument,
-  CurrencyCode,
-  Expense,
-  ExpenseCategory,
-  FamilyMember,
-} from './models';
-import { createBackup, mergeBackup } from './database';
+import type { CurrencyCode } from './models';
+import { createBackup, loadExpenses, loadMembers, loadPreferences, mergeBackup } from './database';
+import { formatExpensesCsv, MAX_BACKUP_SIZE, parseBackup } from './transferUtils';
 
-const BACKUP_APP = 'family-expense-tracker';
-const MAX_BACKUP_SIZE = 25 * 1024 * 1024;
+export { formatExpensesCsv, parseBackup };
+
+const EXPORT_FILE_PREFIX = 'family-expenses-';
 
 export async function exportBackup(): Promise<void> {
   const backup = await createBackup();
-  const fileUri = `${FileSystem.cacheDirectory}family-expenses-${Date.now()}.json`;
-  await FileSystem.writeAsStringAsync(fileUri, JSON.stringify(backup, null, 2), {
-    encoding: FileSystem.EncodingType.UTF8,
-  });
+  const filename = `${EXPORT_FILE_PREFIX}${Date.now()}.json`;
+  const content = JSON.stringify(backup, null, 2);
+  await shareOrDownloadFile(filename, content, 'application/json', 'Share family expense backup', 'public.json');
+}
+
+/** Exports all expenses on this device as a CSV spreadsheet. */
+export async function exportCsv(): Promise<void> {
+  const [expenses, members, preferences] = await Promise.all([
+    loadExpenses(),
+    loadMembers(),
+    loadPreferences(),
+  ]);
+  const filename = `${EXPORT_FILE_PREFIX}${Date.now()}.csv`;
+  const content = formatExpensesCsv(expenses, members, preferences.currency);
+  await shareOrDownloadFile(filename, content, 'text/csv', 'Share family expenses CSV', 'public.comma-separated-values-text');
+}
+
+async function shareOrDownloadFile(
+  filename: string,
+  content: string,
+  mimeType: string,
+  dialogTitle: string,
+  UTI: string
+): Promise<void> {
+  if (Platform.OS === 'web') {
+    downloadOnWeb(filename, content, mimeType);
+    return;
+  }
+
+  cleanupStaleExports();
+  const outFile = new File(Paths.cache, filename);
+  outFile.create({ overwrite: true });
+  await outFile.write(content);
   if (!(await Sharing.isAvailableAsync())) {
     throw new Error('File sharing is not available on this device.');
   }
-  await Sharing.shareAsync(fileUri, {
-    mimeType: 'application/json',
-    dialogTitle: 'Share family expense backup',
-    UTI: 'public.json',
+  await Sharing.shareAsync(outFile.uri, {
+    mimeType,
+    dialogTitle,
+    UTI,
   });
+}
+
+function cleanupStaleExports(): void {
+  try {
+    for (const entry of Paths.cache.list()) {
+      if (
+        entry instanceof File &&
+        entry.name.startsWith(EXPORT_FILE_PREFIX) &&
+        (entry.name.endsWith('.json') || entry.name.endsWith('.csv'))
+      ) {
+        try {
+          entry.delete();
+        } catch {
+          // Ignore locked or already-removed cache entries.
+        }
+      }
+    }
+  } catch {
+    // Cache directory listing is best-effort cleanup.
+  }
+}
+
+function downloadOnWeb(filename: string, content: string, mimeType: string): void {
+  if (typeof document === 'undefined' || typeof Blob === 'undefined' || typeof URL === 'undefined') {
+    throw new Error('Browser file download is not available in this environment.');
+  }
+  const blob = new Blob([content], { type: `${mimeType};charset=utf-8` });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 export async function importBackup(): Promise<{
@@ -52,9 +112,19 @@ export async function importBackup(): Promise<{
   if (file.size !== undefined && file.size > MAX_BACKUP_SIZE) {
     throw new Error('The selected backup is larger than the 25 MB limit.');
   }
-  const contents = await FileSystem.readAsStringAsync(file.uri, {
-    encoding: FileSystem.EncodingType.UTF8,
-  });
+
+  let contents: string;
+  if (Platform.OS === 'web') {
+    if (file.file) {
+      contents = await file.file.text();
+    } else {
+      const response = await fetch(file.uri);
+      contents = await response.text();
+    }
+  } else {
+    contents = await new File(file.uri).text();
+  }
+
   const backup = parseBackup(contents);
   const result = await mergeBackup(backup);
   return {
@@ -62,142 +132,4 @@ export async function importBackup(): Promise<{
     ...result,
     currency: backup.preferences.currency,
   };
-}
-
-function parseBackup(contents: string): BackupDocument {
-  let data: unknown;
-  try {
-    data = JSON.parse(contents);
-  } catch {
-    throw new Error('This file is not valid JSON.');
-  }
-
-  if (
-    !isRecord(data) ||
-    data.app !== BACKUP_APP ||
-    (data.version !== 1 && data.version !== 2)
-  ) {
-    throw new Error('This is not a supported family expense backup.');
-  }
-  if (
-    !Array.isArray(data.members) ||
-    !Array.isArray(data.expenses) ||
-    !isRecord(data.preferences) ||
-    !isCurrency(data.preferences.currency) ||
-    !isNonEmptyString(data.preferences.displayName, 100)
-  ) {
-    throw new Error('The backup is missing required family or expense data.');
-  }
-
-  const members = data.members.map(parseMember);
-  const expenses = data.expenses.map(parseExpense);
-  if (members.length === 0) {
-    throw new Error('The backup does not contain any family members.');
-  }
-  const memberIds = new Set(members.map((member) => member.id));
-  if (memberIds.size !== members.length) {
-    throw new Error('The backup contains duplicate family member IDs.');
-  }
-  const expenseIds = new Set(expenses.map((expense) => expense.id));
-  if (expenseIds.size !== expenses.length) {
-    throw new Error('The backup contains duplicate expense IDs.');
-  }
-  if (expenses.some((expense) => !memberIds.has(expense.paidBy))) {
-    throw new Error('The backup contains an expense with an unknown family member.');
-  }
-  return {
-    app: BACKUP_APP,
-    version: 2,
-    exportedAt: typeof data.exportedAt === 'string' ? data.exportedAt : '',
-    preferences: {
-      currency: data.preferences.currency,
-      displayName: data.preferences.displayName,
-    },
-    members,
-    expenses,
-  };
-}
-
-function parseMember(value: unknown): FamilyMember {
-  if (
-    !isRecord(value) ||
-    !isNonEmptyString(value.id, 128) ||
-    !isNonEmptyString(value.name, 100)
-  ) {
-    throw new Error('The backup contains an invalid family member.');
-  }
-  return { id: value.id, name: value.name.trim() };
-}
-
-function parseExpense(value: unknown): Expense {
-  if (
-    !isRecord(value) ||
-    !isNonEmptyString(value.id, 128) ||
-    !isNonEmptyString(value.title, 160) ||
-    typeof value.amount !== 'number' ||
-    !Number.isFinite(value.amount) ||
-    value.amount <= 0 ||
-    value.amount > 100_000_000 ||
-    (value.quantity !== undefined &&
-      (typeof value.quantity !== 'number' ||
-        !Number.isFinite(value.quantity) ||
-        value.quantity <= 0 ||
-        value.quantity > 1_000_000)) ||
-    (value.unit !== undefined && !isNonEmptyString(value.unit, 24)) ||
-    !isCategory(value.category) ||
-    typeof value.date !== 'string' ||
-    !isIsoDate(value.date) ||
-    !isNonEmptyString(value.paidBy, 128) ||
-    typeof value.notes !== 'string' ||
-    typeof value.createdAt !== 'string'
-  ) {
-    throw new Error('The backup contains an invalid expense record.');
-  }
-  return {
-    id: value.id,
-    title: value.title.trim(),
-    amount: value.amount,
-    quantity: typeof value.quantity === 'number' ? value.quantity : 1,
-    unit: typeof value.unit === 'string' ? value.unit.trim() : 'item',
-    category: value.category,
-    subcategory:
-      typeof value.subcategory === 'string' && value.subcategory.trim()
-        ? value.subcategory.trim()
-        : SUBCATEGORIES[value.category][0],
-    date: value.date,
-    paidBy: value.paidBy,
-    notes: value.notes,
-    createdAt: value.createdAt,
-  };
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function isNonEmptyString(value: unknown, maxLength: number): value is string {
-  return (
-    typeof value === 'string' &&
-    value.trim().length > 0 &&
-    value.length <= maxLength
-  );
-}
-
-function isCurrency(value: unknown): value is CurrencyCode {
-  return typeof value === 'string' && CURRENCIES.includes(value as CurrencyCode);
-}
-
-function isCategory(value: unknown): value is ExpenseCategory {
-  return typeof value === 'string' && CATEGORIES.includes(value as ExpenseCategory);
-}
-
-function isIsoDate(value: string): boolean {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-  const [year, month, day] = value.split('-').map(Number);
-  const parsed = new Date(year, month - 1, day);
-  return (
-    parsed.getFullYear() === year &&
-    parsed.getMonth() === month - 1 &&
-    parsed.getDate() === day
-  );
 }

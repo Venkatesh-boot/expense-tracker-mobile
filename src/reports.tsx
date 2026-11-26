@@ -1,13 +1,12 @@
 import React, { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { CATEGORIES, displayDate, formatMoney, SUBCATEGORIES, todayString } from './models';
-import type { CurrencyCode, Expense, ExpenseCategory } from './models';
+import type { CurrencyCode, Expense, ExpenseCategory, FamilyMember } from './models';
 import { DatePickerField, Dropdown } from './controls';
 import type { DropdownOption } from './controls';
+import { buildChart, getBounds } from './reportUtils';
+import type { ChartDimension, ReportRange } from './reportUtils';
 import { COLORS } from './theme';
-
-type ReportRange = 'day' | 'week' | 'month' | 'year' | 'custom';
-type ChartDimension = 'trend' | 'category' | 'subcategory' | 'product';
 
 const ALL = '__all__';
 const RANGE_OPTIONS: DropdownOption<ReportRange>[] = [
@@ -21,15 +20,18 @@ const CHART_OPTIONS: DropdownOption<ChartDimension>[] = [
   { label: 'Spending trend', value: 'trend' },
   { label: 'By category', value: 'category' },
   { label: 'By subcategory', value: 'subcategory' },
+  { label: 'By member', value: 'member' },
   { label: 'By product', value: 'product' },
 ];
 const ALL_OPTION: DropdownOption<string> = { label: 'All', value: ALL };
 
 export function ReportsScreen({
   expenses,
+  members,
   currency,
 }: {
   expenses: Expense[];
+  members: FamilyMember[];
   currency: CurrencyCode;
 }) {
   const [range, setRange] = useState<ReportRange>('month');
@@ -37,12 +39,20 @@ export function ReportsScreen({
   const [customEnd, setCustomEnd] = useState(todayString());
   const [category, setCategory] = useState<string>(ALL);
   const [subcategory, setSubcategory] = useState<string>(ALL);
+  const [memberId, setMemberId] = useState<string>(ALL);
   const [product, setProduct] = useState<string>(ALL);
   const [dimension, setDimension] = useState<ChartDimension>('trend');
+
+  const memberNames = useMemo(
+    () => new Map(members.map((member) => [member.id, member.name])),
+    [members]
+  );
+
   const bounds = useMemo(
     () => getBounds(range, customStart, customEnd),
     [range, customEnd, customStart]
   );
+
   const availableSubcategories = category === ALL
     ? Array.from(new Set(Object.values(SUBCATEGORIES).flat()))
     : SUBCATEGORIES[category as ExpenseCategory];
@@ -51,26 +61,35 @@ export function ReportsScreen({
     () => expenses.filter((expense) => expense.date >= bounds.start && expense.date <= bounds.end),
     [bounds.end, bounds.start, expenses]
   );
+
   const productOptions = useMemo(() => {
     const products = [...new Set(
       inDateRange
         .filter((expense) => category === ALL || expense.category === category)
         .filter((expense) => subcategory === ALL || expense.subcategory === subcategory)
+        .filter((expense) => memberId === ALL || expense.paidBy === memberId)
         .map((expense) => expense.title)
     )].sort((a, b) => a.localeCompare(b));
     return [ALL_OPTION, ...products.map((value) => ({ label: value, value }))];
-  }, [category, inDateRange, subcategory]);
+  }, [category, inDateRange, memberId, subcategory]);
+
   const filtered = useMemo(
     () => inDateRange
       .filter((expense) => category === ALL || expense.category === category)
       .filter((expense) => subcategory === ALL || expense.subcategory === subcategory)
+      .filter((expense) => memberId === ALL || expense.paidBy === memberId)
       .filter((expense) => product === ALL || expense.title === product),
-    [category, inDateRange, product, subcategory]
+    [category, inDateRange, memberId, product, subcategory]
   );
-  const total = filtered.reduce((sum, expense) => sum + expense.amount, 0);
+
+  const total = useMemo(
+    () => filtered.reduce((sum, expense) => sum + expense.amount, 0),
+    [filtered]
+  );
+
   const chartData = useMemo(
-    () => buildChart(filtered, dimension, range, bounds.start, bounds.end),
-    [bounds.end, bounds.start, dimension, filtered, range]
+    () => buildChart(filtered, dimension, range, bounds.start, bounds.end, memberNames),
+    [bounds.end, bounds.start, dimension, filtered, memberNames, range]
   );
   const chartMax = Math.max(1, ...chartData.map((item) => item.amount));
 
@@ -83,12 +102,18 @@ export function ReportsScreen({
     setSubcategory(value);
     setProduct(ALL);
   };
+  const changeMember = (value: string) => {
+    setMemberId(value);
+    setProduct(ALL);
+  };
 
   return (
     <ScrollView contentContainerStyle={styles.page} keyboardShouldPersistTaps="handled">
       <Text style={styles.eyebrow}>YOUR FAMILY WALLET</Text>
       <Text style={styles.title}>Reports</Text>
-      <Text style={styles.subtitle}>Explore spending by date, category, subcategory, and product.</Text>
+      <Text style={styles.subtitle}>
+        Explore spending by date, member, category, subcategory, and product.
+      </Text>
 
       <View style={styles.filterCard}>
         <Text style={styles.cardTitle}>Filter your report</Text>
@@ -108,6 +133,15 @@ export function ReportsScreen({
             </View>
           </View>
         ) : null}
+        <Dropdown
+          label="Paid by"
+          value={memberId}
+          options={[
+            ALL_OPTION,
+            ...members.map((member) => ({ label: member.name, value: member.id })),
+          ]}
+          onChange={changeMember}
+        />
         <Dropdown
           label="Category"
           value={category}
@@ -181,99 +215,11 @@ export function ReportsScreen({
         </Text>
       </View>
 
-      <Text style={styles.note}>Product reports use the expense description entered when the expense was added.</Text>
+      <Text style={styles.note}>
+        Product reports use the expense description entered when the expense was added.
+      </Text>
     </ScrollView>
   );
-}
-
-function getBounds(
-  range: ReportRange,
-  customStart: string,
-  customEnd: string
-): { start: string; end: string } {
-  const today = new Date();
-  const end = todayString();
-  if (range === 'custom') {
-    return customStart <= customEnd
-      ? { start: customStart, end: customEnd }
-      : { start: customEnd, end: customStart };
-  }
-  if (range === 'day') return { start: end, end };
-  if (range === 'week') {
-    const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const daysSinceMonday = (start.getDay() + 6) % 7;
-    start.setDate(start.getDate() - daysSinceMonday);
-    return { start: toDateKey(start), end };
-  }
-  if (range === 'year') return { start: `${today.getFullYear()}-01-01`, end };
-  return {
-    start: `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01`,
-    end,
-  };
-}
-
-function buildChart(
-  expenses: Expense[],
-  dimension: ChartDimension,
-  range: ReportRange,
-  start: string,
-  end: string
-): { label: string; amount: number }[] {
-  const totals = new Map<string, number>();
-  const aggregate = (key: string, amount: number) => {
-    totals.set(key, (totals.get(key) || 0) + amount);
-  };
-
-  if (dimension === 'trend') {
-    const startDate = new Date(`${start}T00:00:00`);
-    const endDate = new Date(`${end}T00:00:00`);
-    const daySpan = Math.round((endDate.getTime() - startDate.getTime()) / 86_400_000);
-    const useMonthBuckets = range === 'year' || daySpan > 45;
-    expenses.forEach((expense) => {
-      if (range === 'day') {
-        aggregate('Today', expense.amount);
-      } else {
-        const key = useMonthBuckets ? expense.date.slice(0, 7) : expense.date;
-        aggregate(key, expense.amount);
-      }
-    });
-    return [...totals.entries()]
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([key, amount]) => ({
-        label: key === 'Today'
-          ? key
-          : useMonthBuckets
-            ? formatMonth(key)
-            : displayDate(key),
-        amount,
-      }))
-      .slice(-12);
-  }
-
-  expenses.forEach((expense) => {
-    const key = dimension === 'category'
-      ? expense.category
-      : dimension === 'subcategory'
-        ? expense.subcategory
-        : expense.title;
-    aggregate(key, expense.amount);
-  });
-  return [...totals.entries()]
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 8)
-    .map(([label, amount]) => ({ label, amount }));
-}
-
-function formatMonth(value: string): string {
-  const [year, month] = value.split('-').map(Number);
-  return new Date(year, month - 1, 1).toLocaleDateString('en-IN', {
-    month: 'short',
-    year: '2-digit',
-  });
-}
-
-function toDateKey(date: Date): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
 const styles = StyleSheet.create({

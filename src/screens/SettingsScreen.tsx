@@ -1,0 +1,180 @@
+import React, { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import type { CurrencyCode, Preferences } from '../models';
+import { CURRENCIES } from '../models';
+import { COLORS } from '../theme';
+import { ChoiceChip } from '../components/ChoiceChip';
+import { SectionHeading } from '../components/SectionHeading';
+
+type SettingsScreenProps = {
+  preferences: Preferences;
+  onSave: (preferences: Preferences) => Promise<void>;
+  onExport: () => Promise<void>;
+  onExportCsv: () => Promise<void>;
+  onImport: () => Promise<void>;
+};
+
+export function SettingsScreen({
+  preferences,
+  onSave,
+  onExport,
+  onExportCsv,
+  onImport,
+}: SettingsScreenProps) {
+  const [displayName, setDisplayName] = useState(preferences.displayName);
+  const [currency, setCurrency] = useState<CurrencyCode>(preferences.currency);
+  const [saving, setSaving] = useState(false);
+  const [transferring, setTransferring] = useState(false);
+
+  useEffect(() => {
+    setDisplayName(preferences.displayName);
+    setCurrency(preferences.currency);
+  }, [preferences.displayName, preferences.currency]);
+
+  const save = async () => {
+    if (!displayName.trim()) {
+      Alert.alert('Enter a name', 'Your profile name cannot be empty.');
+      return;
+    }
+    setSaving(true);
+    try {
+      await onSave({ ...preferences, displayName: displayName.trim(), currency });
+      Alert.alert('Settings saved', 'Your preferences are stored on this device.');
+    } catch (error) {
+      Alert.alert('Could not save settings', error instanceof Error ? error.message : 'Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const transfer = async (action: 'export' | 'csv' | 'import') => {
+    setTransferring(true);
+    try {
+      if (action === 'export') await onExport();
+      else if (action === 'csv') await onExportCsv();
+      else await onImport();
+    } catch (error) {
+      Alert.alert(
+        action === 'import' ? 'Import failed' : 'Export failed',
+        error instanceof Error ? error.message : 'Please try again.'
+      );
+    } finally {
+      setTransferring(false);
+    }
+  };
+
+  return (
+    <ScrollView contentContainerStyle={styles.pageContent} keyboardShouldPersistTaps="handled">
+      <Text style={styles.eyebrow}>PREFERENCES</Text>
+      <Text style={styles.pageTitle}>Settings</Text>
+      <Text style={styles.pageSubtitle}>Personalize your offline family tracker.</Text>
+
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Your profile</Text>
+        <Text style={styles.inputLabel}>Your name</Text>
+        <TextInput
+          style={styles.input}
+          value={displayName}
+          onChangeText={setDisplayName}
+          placeholder="Name"
+          placeholderTextColor="#9AA6B2"
+          maxLength={100}
+        />
+        <Text style={styles.inputLabel}>Currency</Text>
+        <View style={styles.chipWrap}>
+          {CURRENCIES.map((code) => (
+            <ChoiceChip
+              key={code}
+              label={code}
+              selected={currency === code}
+              onPress={() => setCurrency(code)}
+            />
+          ))}
+        </View>
+        <Pressable
+          style={[styles.primaryButton, saving && styles.disabledButton]}
+          onPress={() => void save()}
+          disabled={saving}
+        >
+          <Text style={styles.primaryButtonText}>{saving ? 'Saving…' : 'Save preferences'}</Text>
+        </Pressable>
+      </View>
+
+      <SectionHeading title="Backup & export" />
+      <View style={styles.infoCard}>
+        <Text style={styles.infoTitle}>Manual backup & spreadsheet export</Text>
+        <Text style={styles.infoText}>
+          Export creates a JSON backup you can share or download to move data to another device. Import merges new expenses and members without deleting existing data. You can also export a CSV spreadsheet for Excel or Google Sheets.
+        </Text>
+        {transferring ? (
+          <ActivityIndicator color={COLORS.primary} style={styles.transferSpinner} />
+        ) : (
+          <View style={styles.transferStack}>
+            <View style={styles.transferButtons}>
+              <Pressable style={styles.secondaryButton} onPress={() => void transfer('export')}>
+                <Text style={styles.secondaryButtonText}>Export JSON</Text>
+              </Pressable>
+              <Pressable style={styles.secondaryButton} onPress={() => void transfer('import')}>
+                <Text style={styles.secondaryButtonText}>Import JSON</Text>
+              </Pressable>
+            </View>
+            <Pressable style={styles.secondaryButton} onPress={() => void transfer('csv')}>
+              <Text style={styles.secondaryButtonText}>Export CSV spreadsheet</Text>
+            </Pressable>
+          </View>
+        )}
+      </View>
+
+      <View style={styles.privacyPanel}>
+        <Text style={styles.privacyPanelTitle}>Privacy first</Text>
+        <Text style={styles.privacyPanelText}>
+          Expense details and scanned receipt text stay on this device. Receipt images are not attached to entries or uploaded.
+        </Text>
+      </View>
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  pageContent: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 28 },
+  eyebrow: { color: COLORS.muted, fontSize: 10, fontWeight: '800', letterSpacing: 1.5, marginBottom: 6 },
+  pageTitle: { color: COLORS.ink, fontSize: 26, fontWeight: '800', marginBottom: 4 },
+  pageSubtitle: { color: COLORS.muted, fontSize: 13, marginBottom: 18 },
+  card: { backgroundColor: COLORS.white, borderRadius: 18, padding: 16, borderWidth: 1, borderColor: COLORS.border },
+  cardTitle: { color: COLORS.ink, fontWeight: '800', fontSize: 15, marginBottom: 4 },
+  inputLabel: { color: COLORS.ink, fontWeight: '700', fontSize: 12, marginBottom: 7, marginTop: 12 },
+  input: {
+    minHeight: 48,
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 13,
+    paddingHorizontal: 13,
+    color: COLORS.ink,
+    fontSize: 14,
+  },
+  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 2 },
+  primaryButton: { backgroundColor: COLORS.primary, minHeight: 50, borderRadius: 15, justifyContent: 'center', alignItems: 'center', marginTop: 16, paddingHorizontal: 16 },
+  primaryButtonText: { color: COLORS.white, fontWeight: '800', fontSize: 15 },
+  disabledButton: { opacity: 0.6 },
+  infoCard: { padding: 16, borderRadius: 18, backgroundColor: '#EEF4FA' },
+  infoTitle: { color: COLORS.ink, fontWeight: '800', fontSize: 14, marginBottom: 7 },
+  infoText: { color: COLORS.muted, fontSize: 12, lineHeight: 18 },
+  transferStack: { gap: 9, marginTop: 14 },
+  transferButtons: { flexDirection: 'row', gap: 9 },
+  secondaryButton: { flex: 1, minHeight: 44, borderRadius: 12, backgroundColor: COLORS.white, borderWidth: 1, borderColor: COLORS.border, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8 },
+  secondaryButtonText: { color: COLORS.primary, fontWeight: '800', fontSize: 12 },
+  transferSpinner: { marginTop: 16 },
+  privacyPanel: { padding: 16, borderRadius: 18, backgroundColor: '#EAF4EF', marginTop: 16 },
+  privacyPanelTitle: { color: COLORS.primary, fontWeight: '800', fontSize: 14, marginBottom: 6 },
+  privacyPanelText: { color: '#4E7164', fontSize: 12, lineHeight: 18 },
+});

@@ -35,7 +35,7 @@ export async function initializeDatabase(): Promise<void> {
       category TEXT NOT NULL,
       subcategory TEXT NOT NULL DEFAULT 'General',
       date TEXT NOT NULL,
-      paid_by TEXT NOT NULL,
+      paid_by TEXT NOT NULL REFERENCES members(id),
       notes TEXT NOT NULL DEFAULT '',
       created_at TEXT NOT NULL
     );
@@ -43,6 +43,8 @@ export async function initializeDatabase(): Promise<void> {
       key TEXT PRIMARY KEY NOT NULL,
       value TEXT NOT NULL
     );
+    CREATE INDEX IF NOT EXISTS idx_expenses_date_created ON expenses (date DESC, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_expenses_paid_by ON expenses (paid_by);
   `);
   const expenseColumns = await database.getAllAsync<{ name: string }>(
     'PRAGMA table_info(expenses)'
@@ -149,9 +151,10 @@ export async function loadPreferences(): Promise<Preferences> {
 export async function savePreferences(
   preferences: Preferences
 ): Promise<void> {
+  const trimmedName = preferences.displayName.trim();
   await getDatabase().withTransactionAsync(async () => {
     await setSetting('currency', preferences.currency);
-    await setSetting('displayName', preferences.displayName.trim());
+    await setSetting('displayName', trimmedName);
     await setSetting('selfId', preferences.selfId);
     const ownMember = await getDatabase().getFirstAsync<{ id: string }>(
       'SELECT id FROM members WHERE id = ?',
@@ -160,7 +163,7 @@ export async function savePreferences(
     if (ownMember) {
       await getDatabase().runAsync(
         'UPDATE members SET name = ? WHERE id = ?',
-        preferences.displayName.trim(),
+        trimmedName,
         preferences.selfId
       );
     }
@@ -173,6 +176,56 @@ export async function addMember(member: FamilyMember): Promise<void> {
     member.id,
     member.name.trim()
   );
+}
+
+/** Renames an existing family member and keeps self displayName in sync. */
+export async function renameMember(id: string, name: string): Promise<void> {
+  const trimmed = name.trim();
+  if (!trimmed) {
+    throw new Error('Family member name cannot be empty.');
+  }
+  const db = getDatabase();
+  await db.withTransactionAsync(async () => {
+    const result = await db.runAsync(
+      'UPDATE members SET name = ? WHERE id = ?',
+      trimmed,
+      id
+    );
+    if (result.changes === 0) {
+      throw new Error('Family member could not be found.');
+    }
+    const settings = await readSettings();
+    if (settings.selfId === id) {
+      await setSetting('displayName', trimmed);
+    }
+  });
+}
+
+/** Removes a non-primary family member after reassigning their expenses. */
+export async function removeMember(id: string, reassignToId: string): Promise<void> {
+  if (id === reassignToId) {
+    throw new Error('Choose another family member to reassign existing expenses.');
+  }
+  const db = getDatabase();
+  await db.withTransactionAsync(async () => {
+    const settings = await readSettings();
+    if (settings.selfId === id) {
+      throw new Error('Your primary profile cannot be removed.');
+    }
+    const target = await db.getFirstAsync<{ id: string }>(
+      'SELECT id FROM members WHERE id = ?',
+      reassignToId
+    );
+    if (!target) {
+      throw new Error('The reassignment family member does not exist.');
+    }
+    await db.runAsync(
+      'UPDATE expenses SET paid_by = ? WHERE paid_by = ?',
+      reassignToId,
+      id
+    );
+    await db.runAsync('DELETE FROM members WHERE id = ?', id);
+  });
 }
 
 export async function addExpense(expense: Expense): Promise<void> {
@@ -216,6 +269,29 @@ export async function addExpenses(expenses: Expense[]): Promise<void> {
       );
     }
   });
+}
+
+/** Updates an existing expense record on this device. */
+export async function updateExpense(expense: Expense): Promise<void> {
+  const result = await getDatabase().runAsync(
+    `UPDATE expenses
+     SET title = ?, amount = ?, quantity = ?, unit = ?, category = ?, subcategory = ?,
+         date = ?, paid_by = ?, notes = ?
+     WHERE id = ?`,
+    expense.title.trim(),
+    expense.amount,
+    expense.quantity,
+    expense.unit.trim(),
+    expense.category,
+    expense.subcategory,
+    expense.date,
+    expense.paidBy,
+    expense.notes.trim(),
+    expense.id
+  );
+  if (result.changes === 0) {
+    throw new Error('Expense could not be found.');
+  }
 }
 
 export async function removeExpense(id: string): Promise<void> {
