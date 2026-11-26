@@ -57,9 +57,16 @@ export function ReportsScreen({
     [range, customEnd, customStart]
   );
 
-  const availableSubcategories = category === ALL
-    ? Array.from(new Set(Object.values(SUBCATEGORIES).flat()))
-    : SUBCATEGORIES[category as ExpenseCategory];
+  const availableSubcategories = useMemo(() => {
+    const base =
+      category === ALL
+        ? Object.values(SUBCATEGORIES).flat()
+        : SUBCATEGORIES[category as ExpenseCategory];
+    const fromExpenses = expenses
+      .filter((expense) => category === ALL || expense.category === category)
+      .map((expense) => expense.subcategory);
+    return Array.from(new Set([...base, ...fromExpenses]));
+  }, [category, expenses]);
 
   const inDateRange = useMemo(
     () => expenses.filter((expense) => expense.date >= bounds.start && expense.date <= bounds.end),

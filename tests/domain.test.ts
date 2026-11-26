@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   buildProductSuggestions,
+  buildSubcategoryList,
   buildUnitOptions,
   displayDate,
   filterProductSuggestions,
@@ -11,6 +12,7 @@ import {
   resolveThemeMode,
   sanitizeDecimalInput,
   sanitizeQuantityInput,
+  SUBCATEGORIES,
   todayString,
 } from '../src/domain';
 import type { Expense } from '../src/domain';
@@ -132,4 +134,16 @@ test('buildProductSuggestions deduplicates by title and preserves latest metadat
     filtered.map((item) => item.title),
     ['Milk', 'Organic Milk']
   );
+});
+
+test('SUBCATEGORIES provide granular meat/item options and buildSubcategoryList preserves legacy values', () => {
+  assert.ok(SUBCATEGORIES.Groceries.includes('Chicken'));
+  assert.ok(SUBCATEGORIES.Groceries.includes('Mutton'));
+  assert.ok(SUBCATEGORIES.Groceries.includes('Beef'));
+
+  const standard = buildSubcategoryList('Groceries', 'Chicken');
+  assert.equal(standard.filter((item) => item === 'Chicken').length, 1);
+
+  const legacy = buildSubcategoryList('Groceries', 'Meat & seafood');
+  assert.ok(legacy.includes('Meat & seafood'));
 });

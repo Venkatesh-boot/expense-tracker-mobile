@@ -12,15 +12,107 @@ export const CATEGORIES = [
 export type ExpenseCategory = (typeof CATEGORIES)[number];
 
 export const SUBCATEGORIES: Record<ExpenseCategory, readonly string[]> = {
-  Groceries: ['Vegetables & fruits', 'Meat & seafood', 'Dairy & bakery', 'Pantry', 'Household'],
-  Food: ['Restaurant', 'Takeaway', 'Cafe', 'Snacks'],
-  Transport: ['Fuel', 'Public transport', 'Taxi', 'Parking'],
-  Home: ['Rent', 'Maintenance', 'Furniture', 'Cleaning'],
-  Bills: ['Electricity', 'Water', 'Internet', 'Mobile'],
-  Health: ['Pharmacy', 'Doctor', 'Medical supplies', 'Insurance'],
-  Shopping: ['Clothing', 'Electronics', 'Personal care', 'Other shopping'],
-  Other: ['General', 'Education', 'Entertainment', 'Gifts'],
+  Groceries: [
+    'Vegetables',
+    'Fruits',
+    'Chicken',
+    'Mutton',
+    'Beef',
+    'Fish & seafood',
+    'Eggs',
+    'Milk & dairy',
+    'Bakery & bread',
+    'Rice & grains',
+    'Pulses & spices',
+    'Oil & ghee',
+    'Beverages',
+    'Pantry',
+    'Household',
+  ],
+  Food: [
+    'Restaurant',
+    'Takeaway',
+    'Food delivery',
+    'Cafe & coffee',
+    'Bakery & desserts',
+    'Street food',
+    'Snacks',
+    'Breakfast',
+    'Lunch & dinner',
+  ],
+  Transport: [
+    'Petrol',
+    'Diesel',
+    'EV charging',
+    'Bus & metro',
+    'Train',
+    'Auto & taxi',
+    'Flight',
+    'Parking & toll',
+    'Vehicle service',
+  ],
+  Home: [
+    'Rent',
+    'Maintenance',
+    'Plumbing & electrical',
+    'Appliances',
+    'Furniture',
+    'Cleaning supplies',
+    'Maid & help',
+    'Gardening',
+  ],
+  Bills: [
+    'Electricity',
+    'Water',
+    'Gas / LPG',
+    'Internet & Wi-Fi',
+    'Mobile recharge',
+    'DTH & streaming',
+    'Society & HOA',
+  ],
+  Health: [
+    'Pharmacy & medicines',
+    'Doctor consultation',
+    'Lab tests & diagnostics',
+    'Dental & optical',
+    'Medical supplies',
+    'Fitness & gym',
+    'Health insurance',
+  ],
+  Shopping: [
+    'Clothing',
+    'Footwear',
+    'Electronics',
+    'Cosmetics & skincare',
+    'Personal care',
+    'Home decor',
+    'Toys & baby',
+    'Other shopping',
+  ],
+  Other: [
+    'General',
+    'School & tuition',
+    'Books & stationery',
+    'Movies & outings',
+    'Travel & stays',
+    'Gifts & celebrations',
+    'Donations & charity',
+    'Pet care',
+  ],
 };
+
+/** Returns subcategory options for a category, preserving any legacy value on an existing expense. */
+export function buildSubcategoryList(
+  category: ExpenseCategory,
+  currentSubcategory?: string
+): string[] {
+  const list: string[] = [...SUBCATEGORIES[category]];
+  const trimmed = currentSubcategory?.trim();
+  if (trimmed && !list.includes(trimmed)) {
+    list.push(trimmed);
+  }
+  return list;
+}
 
 export const UNITS = [
   'pc',
