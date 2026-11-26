@@ -98,8 +98,13 @@ export function SettingsScreen({
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.pageContent} keyboardShouldPersistTaps="handled">
-      <Text style={styles.eyebrow}>PREFERENCES</Text>
+    <View style={styles.flex}>
+      <ScrollView
+        style={styles.flex}
+        contentContainerStyle={styles.pageContent}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Text style={styles.eyebrow}>PREFERENCES</Text>
       <Text style={styles.pageTitle}>Settings</Text>
       <Text style={styles.pageSubtitle}>Personalize your offline family tracker.</Text>
 
@@ -156,13 +161,6 @@ export function SettingsScreen({
           inputMode="decimal"
           accessibilityLabel="Monthly budget"
         />
-        <Pressable
-          style={[styles.primaryButton, saving && styles.disabledButton]}
-          onPress={() => void save()}
-          disabled={saving}
-        >
-          <Text style={styles.primaryButtonText}>{saving ? 'Saving…' : 'Save preferences'}</Text>
-        </Pressable>
       </View>
 
       <SectionHeading title="Backup & export" />
@@ -196,13 +194,26 @@ export function SettingsScreen({
           Expense details and scanned receipt text stay on this device. Receipt images are not attached to entries or uploaded.
         </Text>
       </View>
-    </ScrollView>
+      </ScrollView>
+
+      <View style={styles.floatingFooter}>
+        <Pressable
+          style={[styles.primaryButton, saving && styles.disabledButton]}
+          onPress={() => void save()}
+          disabled={saving}
+          accessibilityRole="button"
+        >
+          <Text style={styles.primaryButtonText}>{saving ? 'Saving…' : 'Save preferences'}</Text>
+        </Pressable>
+      </View>
+    </View>
   );
 }
 
 const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
-    pageContent: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 28 },
+    flex: { flex: 1 },
+    pageContent: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 104 },
     eyebrow: { color: colors.muted, fontSize: 10, fontWeight: '800', letterSpacing: 1.5, marginBottom: 6 },
     pageTitle: { color: colors.ink, fontSize: 26, fontWeight: '800', marginBottom: 4 },
     pageSubtitle: { color: colors.muted, fontSize: 13, marginBottom: 18 },
@@ -220,7 +231,23 @@ const createStyles = (colors: ThemeColors) =>
       fontSize: 14,
     },
     chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 2 },
-    primaryButton: { backgroundColor: colors.primary, minHeight: 50, borderRadius: 15, justifyContent: 'center', alignItems: 'center', marginTop: 16, paddingHorizontal: 16 },
+    floatingFooter: {
+      position: 'absolute',
+      left: 16,
+      right: 16,
+      bottom: 14,
+      backgroundColor: colors.surface,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 10,
+      shadowColor: '#000000',
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.14,
+      shadowRadius: 12,
+      elevation: 10,
+    },
+    primaryButton: { backgroundColor: colors.primary, minHeight: 48, borderRadius: 13, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 16 },
     primaryButtonText: { color: colors.onPrimary, fontWeight: '800', fontSize: 15 },
     disabledButton: { opacity: 0.6 },
     infoCard: { padding: 16, borderRadius: 18, backgroundColor: colors.surfaceTint },

@@ -20,10 +20,12 @@ import type {
 } from '../models';
 import {
   buildProductSuggestions,
+  buildSubcategoryList,
   buildUnitOptions,
   CATEGORIES,
   createId,
   filterProductSuggestions,
+  sanitizeDecimalInput,
   sanitizeQuantityInput,
   SUBCATEGORIES,
   todayString,
@@ -171,184 +173,184 @@ export function AddExpenseScreen({
     }
   }, [editingExpense, members, preferences.selfId]);
 
-  const subcategoryOptions = SUBCATEGORIES[category].map((value) => ({
-    label: value,
-    value,
-    icon: getSubcategoryIcon(value, category),
-    iconColor: categoryColors[category]?.fg,
-    iconBg: categoryColors[category]?.bg,
-  }));
-  const selectCategory = (value: ExpenseCategory) => {
-    setCategory(value);
-    setSubcategory(SUBCATEGORIES[value][0]);
-  };
+    const subcategoryOptions = buildSubcategoryList(category, subcategory).map((value) => ({
+      label: value,
+      value,
+      icon: getSubcategoryIcon(value, category),
+      iconColor: categoryColors[category]?.fg,
+      iconBg: categoryColors[category]?.bg,
+    }));
+    const selectCategory = (value: ExpenseCategory) => {
+      setCategory(value);
+      setSubcategory(SUBCATEGORIES[value][0]);
+    };
 
-  const applyScan = async (source: 'camera' | 'library' | 'pdf') => {
-    setScanning(true);
-    setScanFeedback(null);
-    try {
-      const result = await onScanReceipt(source);
-      if (result) {
-        const suggestion = result.suggestions[0];
-        if (result.itemized) {
-          setReceiptItems(
-            result.suggestions.map((item) => ({
-              id: createId(),
-              title: item.title,
-              amount: item.amount,
-              quantityText: String(item.quantity),
-              unit: item.unit,
-              category: item.category,
-              subcategory:
-                item.category === 'Groceries' ? 'Pantry' : SUBCATEGORIES[item.category][0],
-            }))
-          );
-        } else {
-          setReceiptItems(null);
-          if (suggestion.title) setTitle(suggestion.title);
-          if (suggestion.amount) setAmount(suggestion.amount);
-          setQuantity(String(suggestion.quantity));
-          setUnit(suggestion.unit);
-          selectCategory(suggestion.category);
+    const applyScan = async (source: 'camera' | 'library' | 'pdf') => {
+      setScanning(true);
+      setScanFeedback(null);
+      try {
+        const result = await onScanReceipt(source);
+        if (result) {
+          const suggestion = result.suggestions[0];
+          if (result.itemized) {
+            setReceiptItems(
+              result.suggestions.map((item) => ({
+                id: createId(),
+                title: item.title,
+                amount: item.amount,
+                quantityText: String(item.quantity),
+                unit: item.unit,
+                category: item.category,
+                subcategory:
+                  item.category === 'Groceries' ? 'Pantry' : SUBCATEGORIES[item.category][0],
+              }))
+            );
+          } else {
+            setReceiptItems(null);
+            if (suggestion.title) setTitle(suggestion.title);
+            if (suggestion.amount) setAmount(suggestion.amount);
+            setQuantity(String(suggestion.quantity));
+            setUnit(suggestion.unit);
+            selectCategory(suggestion.category);
+          }
+          if (suggestion.date) setDate(suggestion.date);
+          setScanFeedback({
+            message: result.itemized
+              ? `Found ${result.suggestions.length} bill items. Review each item below before saving.`
+              : 'Receipt details suggested. Review them below before saving.',
+            isError: false,
+          });
         }
-        if (suggestion.date) setDate(suggestion.date);
+      } catch (error) {
         setScanFeedback({
-          message: result.itemized
-            ? `Found ${result.suggestions.length} bill items. Review each item below before saving.`
-            : 'Receipt details suggested. Review them below before saving.',
-          isError: false,
+          message:
+            error instanceof Error
+              ? error.message
+              : 'Could not scan the receipt. Please try again or enter the details manually.',
+          isError: true,
         });
+      } finally {
+        setScanning(false);
       }
-    } catch (error) {
-      setScanFeedback({
-        message:
-          error instanceof Error
-            ? error.message
-            : 'Could not scan the receipt. Please try again or enter the details manually.',
-        isError: true,
-      });
-    } finally {
-      setScanning(false);
-    }
-  };
+    };
 
-  const updateReceiptItem = (
-    id: string,
-    updater: (item: ReceiptDraftItem) => ReceiptDraftItem
-  ) => {
-    setReceiptItems((current) =>
-      current ? current.map((row) => (row.id === id ? updater(row) : row)) : null
-    );
-  };
-
-  const removeReceiptItem = (id: string) => {
-    setReceiptItems((current) => {
-      if (!current) return null;
-      const next = current.filter((row) => row.id !== id);
-      return next.length > 0 ? next : null;
-    });
-  };
-
-  const save = async () => {
-    if (parseDate(date) === null) {
-      Alert.alert('Check the date', 'Use a valid date in YYYY-MM-DD format.');
-      return;
-    }
-    if (!paidBy) {
-      Alert.alert('Add a family member', 'Add a family member before recording an expense.');
-      return;
-    }
-
-    const expenses = receiptItems
-      ? receiptItems.map((item) => ({
-        title: item.title.trim(),
-        amount: Number(item.amount.replace(/,/g, '')),
-        quantity: Number(item.quantityText),
-        unit: item.unit.trim(),
-        category: item.category,
-        subcategory: item.subcategory,
-      }))
-      : [
-        {
-          title: title.trim(),
-          amount: Number(amount.replace(/,/g, '')),
-          quantity: Number(quantity),
-          unit: unit.trim(),
-          category,
-          subcategory,
-        },
-      ];
-
-    if (expenses.some((expense) => !expense.title)) {
-      Alert.alert('Add a description', 'Enter a description for each bill item.');
-      return;
-    }
-    if (
-      expenses.some(
-        (expense) =>
-          !Number.isFinite(expense.amount) ||
-          expense.amount <= 0 ||
-          expense.amount > 100_000_000
-      )
-    ) {
-      Alert.alert('Check the amounts', 'Each bill item needs an amount greater than zero.');
-      return;
-    }
-    if (
-      expenses.some(
-        (expense) =>
-          !Number.isFinite(expense.quantity) ||
-          expense.quantity <= 0 ||
-          expense.quantity > 1_000_000 ||
-          !expense.unit ||
-          expense.unit.length > 24
-      )
-    ) {
-      Alert.alert(
-        'Check quantity and unit',
-        'Enter a positive quantity and select a unit for each expense.'
+    const updateReceiptItem = (
+      id: string,
+      updater: (item: ReceiptDraftItem) => ReceiptDraftItem
+    ) => {
+      setReceiptItems((current) =>
+        current ? current.map((row) => (row.id === id ? updater(row) : row)) : null
       );
-      return;
-    }
+    };
 
-    setSaving(true);
-    try {
-      if (editingExpense) {
-        const updated = expenses[0];
-        await onUpdate({
-          ...editingExpense,
-          ...updated,
-          date,
-          paidBy,
-          notes: notes.trim(),
-        });
-      } else {
-        await onSave(
-          expenses.map((expense) => ({
-            ...expense,
+    const removeReceiptItem = (id: string) => {
+      setReceiptItems((current) => {
+        if (!current) return null;
+        const next = current.filter((row) => row.id !== id);
+        return next.length > 0 ? next : null;
+      });
+    };
+
+    const save = async () => {
+      if (parseDate(date) === null) {
+        Alert.alert('Check the date', 'Use a valid date in YYYY-MM-DD format.');
+        return;
+      }
+      if (!paidBy) {
+        Alert.alert('Add a family member', 'Add a family member before recording an expense.');
+        return;
+      }
+
+      const expenses = receiptItems
+        ? receiptItems.map((item) => ({
+          title: item.title.trim(),
+          amount: Number(item.amount.replace(/,/g, '')),
+          quantity: Number(item.quantityText),
+          unit: item.unit.trim(),
+          category: item.category,
+          subcategory: item.subcategory,
+        }))
+        : [
+          {
+            title: title.trim(),
+            amount: Number(amount.replace(/,/g, '')),
+            quantity: Number(quantity),
+            unit: unit.trim(),
+            category,
+            subcategory,
+          },
+        ];
+
+      if (expenses.some((expense) => !expense.title)) {
+        Alert.alert('Add a description', 'Enter a description for each bill item.');
+        return;
+      }
+      if (
+        expenses.some(
+          (expense) =>
+            !Number.isFinite(expense.amount) ||
+            expense.amount <= 0 ||
+            expense.amount > 100_000_000
+        )
+      ) {
+        Alert.alert('Check the amounts', 'Each bill item needs an amount greater than zero.');
+        return;
+      }
+      if (
+        expenses.some(
+          (expense) =>
+            !Number.isFinite(expense.quantity) ||
+            expense.quantity <= 0 ||
+            expense.quantity > 1_000_000 ||
+            !expense.unit ||
+            expense.unit.length > 24
+        )
+      ) {
+        Alert.alert(
+          'Check quantity and unit',
+          'Enter a positive quantity and select a unit for each expense.'
+        );
+        return;
+      }
+
+      setSaving(true);
+      try {
+        if (editingExpense) {
+          const updated = expenses[0];
+          await onUpdate({
+            ...editingExpense,
+            ...updated,
             date,
             paidBy,
             notes: notes.trim(),
-            createdAt: new Date().toISOString(),
-          }))
+          });
+        } else {
+          await onSave(
+            expenses.map((expense) => ({
+              ...expense,
+              date,
+              paidBy,
+              notes: notes.trim(),
+              createdAt: new Date().toISOString(),
+            }))
+          );
+        }
+      } catch (error) {
+        Alert.alert(
+          'Could not save expense',
+          error instanceof Error ? error.message : 'Please try again.'
         );
+      } finally {
+        setSaving(false);
       }
-    } catch (error) {
-      Alert.alert(
-        'Could not save expense',
-        error instanceof Error ? error.message : 'Please try again.'
-      );
-    } finally {
-      setSaving(false);
-    }
-  };
+    };
 
-  return (
+    return(
     <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 12 : 0}
-    >
+      style = { styles.flex }
+      behavior = { Platform.OS === 'ios' ? 'padding' : undefined }
+      keyboardVerticalOffset = { Platform.OS === 'ios' ? 12 : 0 }
+        >
       <ScrollView contentContainerStyle={styles.pageContent} keyboardShouldPersistTaps="handled">
         <View style={styles.formHeader}>
           <Pressable
@@ -509,11 +511,15 @@ export function AddExpenseScreen({
                           style={[styles.input, styles.receiptItemAmount]}
                           value={item.amount}
                           onChangeText={(value) =>
-                            updateReceiptItem(item.id, (row) => ({ ...row, amount: value }))
+                            updateReceiptItem(item.id, (row) => ({
+                              ...row,
+                              amount: sanitizeDecimalInput(value),
+                            }))
                           }
                           placeholder="0.00"
                           placeholderTextColor={colors.placeholder}
                           keyboardType="decimal-pad"
+                          inputMode="decimal"
                           accessibilityLabel={`Bill item ${index + 1} amount`}
                         />
                       </View>
@@ -547,7 +553,7 @@ export function AddExpenseScreen({
                             compact
                             modalTitle="Subcategory"
                             value={item.subcategory}
-                            options={SUBCATEGORIES[item.category].map((value) => ({
+                            options={buildSubcategoryList(item.category, item.subcategory).map((value) => ({
                               label: value,
                               value,
                               icon: getSubcategoryIcon(value, item.category),
@@ -600,10 +606,11 @@ export function AddExpenseScreen({
             <TextInput
               style={styles.input}
               value={amount}
-              onChangeText={setAmount}
+              onChangeText={(value) => setAmount(sanitizeDecimalInput(value))}
               placeholder="0.00"
               placeholderTextColor={colors.placeholder}
               keyboardType="decimal-pad"
+              inputMode="decimal"
               accessibilityLabel="Expense amount"
             />
 
@@ -678,7 +685,17 @@ export function AddExpenseScreen({
           multiline
           textAlignVertical="top"
         />
+      </ScrollView>
 
+      <View style={styles.floatingFooter}>
+        <Pressable
+          style={styles.cancelAction}
+          onPress={onCancel}
+          disabled={saving}
+          accessibilityRole="button"
+        >
+          <Text style={styles.cancelActionText}>Cancel</Text>
+        </Pressable>
         <Pressable
           style={[styles.primaryButton, saving && styles.disabledButton]}
           onPress={() => void save()}
@@ -695,11 +712,8 @@ export function AddExpenseScreen({
                   : 'Save expense'}
           </Text>
         </Pressable>
-        <Pressable style={styles.cancelAction} onPress={onCancel}>
-          <Text style={styles.cancelActionText}>Cancel</Text>
-        </Pressable>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </View>
+    </KeyboardAvoidingView >
   );
 }
 
@@ -762,7 +776,7 @@ function ProductSuggestionsList({
 const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     flex: { flex: 1 },
-    pageContent: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 28 },
+    pageContent: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 108 },
     formHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 18 },
     backButton: {
       width: 42,
@@ -839,18 +853,46 @@ const createStyles = (colors: ThemeColors) =>
     },
     notesInput: { minHeight: 82, paddingTop: 12 },
     chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 2 },
+    floatingFooter: {
+      position: 'absolute',
+      left: 16,
+      right: 16,
+      bottom: 14,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      backgroundColor: colors.surface,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 10,
+      shadowColor: '#000000',
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.14,
+      shadowRadius: 12,
+      elevation: 10,
+    },
     primaryButton: {
+      flex: 1,
       backgroundColor: colors.primary,
-      minHeight: 50,
-      borderRadius: 15,
+      minHeight: 48,
+      borderRadius: 13,
       justifyContent: 'center',
       alignItems: 'center',
-      marginTop: 16,
       paddingHorizontal: 16,
     },
     primaryButtonText: { color: colors.onPrimary, fontWeight: '800', fontSize: 15 },
     disabledButton: { opacity: 0.6 },
-    cancelAction: { minHeight: 46, justifyContent: 'center', alignItems: 'center', marginTop: 4 },
+    cancelAction: {
+      minHeight: 48,
+      paddingHorizontal: 18,
+      borderRadius: 13,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.background,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
     cancelActionText: { color: colors.muted, fontWeight: '700', fontSize: 13 },
     suggestionsList: {
       marginTop: 6,

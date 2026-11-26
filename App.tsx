@@ -383,6 +383,7 @@ function AppShell({
                       expenses={expenses}
                       members={members}
                       preferences={preferences}
+                      onAddExpense={() => openAddExpense('expenses')}
                       onSelectExpense={setSelectedExpense}
                       onDeleteExpense={confirmDeleteExpense}
                     />

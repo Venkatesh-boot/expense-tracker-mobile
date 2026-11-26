@@ -1,8 +1,9 @@
 import React, { useMemo, useState } from 'react';
-import { FlatList, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { FlatList, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { Expense, FamilyMember, Preferences } from '../models';
 import { useTheme, useThemedStyles } from '../theme';
 import type { ThemeColors } from '../theme';
+import { AppIcon } from '../components/AppIcon';
 import { ChoiceChip } from '../components/ChoiceChip';
 import { ExpenseRow } from '../components/ExpenseRow';
 
@@ -10,6 +11,7 @@ type ExpensesScreenProps = {
   expenses: Expense[];
   members: FamilyMember[];
   preferences: Preferences;
+  onAddExpense: () => void;
   onSelectExpense: (expense: Expense) => void;
   onDeleteExpense: (expense: Expense) => void;
 };
@@ -20,6 +22,7 @@ export function ExpensesScreen({
   expenses,
   members,
   preferences,
+  onAddExpense,
   onSelectExpense,
   onDeleteExpense,
 }: ExpensesScreenProps) {
@@ -89,49 +92,61 @@ export function ExpensesScreen({
   );
 
   return (
-    <FlatList
-      data={filtered}
-      keyExtractor={(item) => item.id}
-      contentContainerStyle={styles.pageContent}
-      keyboardShouldPersistTaps="handled"
-      ListHeaderComponent={header}
-      ListEmptyComponent={
-        <View style={styles.emptyCard}>
-          <Text style={styles.emptyTitle}>
-            {expenses.length === 0 ? 'Nothing recorded yet' : 'No matches'}
-          </Text>
-          <Text style={styles.emptyText}>
-            {expenses.length === 0
-              ? 'Add your first family expense to get started.'
-              : 'Try a different search term or member filter.'}
-          </Text>
-        </View>
-      }
-      renderItem={({ item, index }) => (
-        <View
-          style={[
-            styles.rowShell,
-            index === 0 && styles.rowFirst,
-            index === filtered.length - 1 && styles.rowLast,
-          ]}
-        >
-          <ExpenseRow
-            expense={item}
-            memberName={memberNames.get(item.paidBy) || 'Family'}
-            currency={preferences.currency}
-            onPress={onSelectExpense}
-            onDelete={onDeleteExpense}
-            last={index === filtered.length - 1}
-          />
-        </View>
-      )}
-    />
+    <View style={styles.flex}>
+      <FlatList
+        data={filtered}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.pageContent}
+        keyboardShouldPersistTaps="handled"
+        ListHeaderComponent={header}
+        ListEmptyComponent={
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyTitle}>
+              {expenses.length === 0 ? 'Nothing recorded yet' : 'No matches'}
+            </Text>
+            <Text style={styles.emptyText}>
+              {expenses.length === 0
+                ? 'Add your first family expense to get started.'
+                : 'Try a different search term or member filter.'}
+            </Text>
+          </View>
+        }
+        renderItem={({ item, index }) => (
+          <View
+            style={[
+              styles.rowShell,
+              index === 0 && styles.rowFirst,
+              index === filtered.length - 1 && styles.rowLast,
+            ]}
+          >
+            <ExpenseRow
+              expense={item}
+              memberName={memberNames.get(item.paidBy) || 'Family'}
+              currency={preferences.currency}
+              onPress={onSelectExpense}
+              onDelete={onDeleteExpense}
+              last={index === filtered.length - 1}
+            />
+          </View>
+        )}
+      />
+      <Pressable
+        style={styles.floatingAddButton}
+        onPress={onAddExpense}
+        accessibilityRole="button"
+        accessibilityLabel="Add expense"
+      >
+        <AppIcon name="add" color={colors.onPrimary} size={17} />
+        <Text style={styles.floatingAddText}>Add expense</Text>
+      </Pressable>
+    </View>
   );
 }
 
 const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
-    pageContent: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 28 },
+    flex: { flex: 1 },
+    pageContent: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 92 },
     eyebrow: { color: colors.muted, fontSize: 10, fontWeight: '800', letterSpacing: 1.5, marginBottom: 6 },
     pageTitle: { color: colors.ink, fontSize: 26, fontWeight: '800', marginBottom: 4 },
     pageSubtitle: { color: colors.muted, fontSize: 13, marginBottom: 18 },
@@ -178,4 +193,26 @@ const createStyles = (colors: ThemeColors) =>
     },
     emptyTitle: { color: colors.ink, fontWeight: '800', fontSize: 15, marginBottom: 6 },
     emptyText: { color: colors.muted, fontSize: 13, lineHeight: 19 },
+    floatingAddButton: {
+      position: 'absolute',
+      right: 20,
+      bottom: 18,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 7,
+      backgroundColor: colors.primary,
+      borderRadius: 24,
+      paddingHorizontal: 18,
+      paddingVertical: 13,
+      shadowColor: '#000000',
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.2,
+      shadowRadius: 12,
+      elevation: 10,
+    },
+    floatingAddText: {
+      color: colors.onPrimary,
+      fontSize: 13,
+      fontWeight: '800',
+    },
   });

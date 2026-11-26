@@ -169,7 +169,12 @@ export function DashboardScreen({
   }));
 
   return (
-    <ScrollView contentContainerStyle={styles.pageContent} showsVerticalScrollIndicator={false}>
+    <View style={styles.flex}>
+      <ScrollView
+        style={styles.flex}
+        contentContainerStyle={styles.pageContent}
+        showsVerticalScrollIndicator={false}
+      >
       <View style={styles.greetingRow}>
         <View style={styles.flex}>
           <Text style={styles.eyebrow}>YOUR FAMILY WALLET</Text>
@@ -1038,13 +1043,24 @@ export function DashboardScreen({
         </View>
       </Modal>
     </ScrollView>
+
+      <Pressable
+        style={styles.floatingAddButton}
+        onPress={onAddExpense}
+        accessibilityRole="button"
+        accessibilityLabel="Add expense"
+      >
+        <AppIcon name="add" color={colors.onPrimary} size={17} />
+        <Text style={styles.floatingAddText}>Add expense</Text>
+      </Pressable>
+    </View>
   );
 }
 
 const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     flex: { flex: 1 },
-    pageContent: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 28 },
+    pageContent: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 92 },
     greetingRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18, gap: 12 },
     eyebrow: { color: colors.muted, fontSize: 10, fontWeight: '800', letterSpacing: 1.5, marginBottom: 4 },
     greeting: { color: colors.ink, fontSize: 23, fontWeight: '800' },
@@ -1453,4 +1469,26 @@ const createStyles = (colors: ThemeColors) =>
       paddingHorizontal: 18,
     },
     modalSaveText: { color: colors.onPrimary, fontSize: 13, fontWeight: '800' },
+    floatingAddButton: {
+      position: 'absolute',
+      right: 20,
+      bottom: 18,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 7,
+      backgroundColor: colors.primary,
+      borderRadius: 24,
+      paddingHorizontal: 18,
+      paddingVertical: 13,
+      shadowColor: '#000000',
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.2,
+      shadowRadius: 12,
+      elevation: 10,
+    },
+    floatingAddText: {
+      color: colors.onPrimary,
+      fontSize: 13,
+      fontWeight: '800',
+    },
   });

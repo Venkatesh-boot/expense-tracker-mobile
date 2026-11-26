@@ -9,6 +9,7 @@ import {
   getCurrencyLocale,
   getNextThemeChangeDelayMs,
   resolveThemeMode,
+  sanitizeDecimalInput,
   sanitizeQuantityInput,
   todayString,
 } from '../src/domain';
@@ -44,6 +45,7 @@ test('sanitizeQuantityInput strips non-numeric characters and keeps a single dec
   assert.equal(sanitizeQuantityInput('12abc.34xyz'), '12.34');
   assert.equal(sanitizeQuantityInput('1.2.3'), '1.23');
   assert.equal(sanitizeQuantityInput('-5.5 kg'), '5.5');
+  assert.equal(sanitizeDecimalInput('₹1,250.75'), '1250.75');
 });
 
 test('buildUnitOptions includes standard units and preserves custom legacy units', () => {

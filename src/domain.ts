@@ -54,13 +54,16 @@ export const UNIT_LABELS: Record<ExpenseUnit, string> = {
   km: 'Kilometer (km)',
 };
 
-/** Strips non-numeric characters from a quantity input while keeping at most one decimal point. */
-export function sanitizeQuantityInput(value: string): string {
+/** Strips non-numeric characters from a decimal input while keeping at most one decimal point. */
+export function sanitizeDecimalInput(value: string): string {
   const cleaned = value.replace(/[^0-9.]/g, '');
   const dotIndex = cleaned.indexOf('.');
   if (dotIndex === -1) return cleaned;
   return `${cleaned.slice(0, dotIndex + 1)}${cleaned.slice(dotIndex + 1).replace(/\./g, '')}`;
 }
+
+/** Strips non-numeric characters from a quantity input while keeping at most one decimal point. */
+export const sanitizeQuantityInput = sanitizeDecimalInput;
 
 /** Builds unit dropdown options, preserving any custom or legacy unit on an existing expense. */
 export function buildUnitOptions(
