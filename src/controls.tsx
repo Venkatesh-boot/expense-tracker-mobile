@@ -14,11 +14,15 @@ import { displayDate } from './models';
 import { useTheme, useThemedStyles } from './theme';
 import type { ThemeColors } from './theme';
 import { AppIcon } from './components/AppIcon';
+import type { AppIconName } from './components/AppIcon';
 
 export type DropdownOption<T extends string> = {
   label: string;
   value: T;
   shortLabel?: string;
+  icon?: AppIconName;
+  iconColor?: string;
+  iconBg?: string;
 };
 
 export function Dropdown<T extends string>({
@@ -55,6 +59,21 @@ export function Dropdown<T extends string>({
         accessibilityRole="button"
         accessibilityLabel={`${label || modalTitle || 'Option'}: ${selected?.label || placeholder}`}
       >
+        {selected?.icon ? (
+          <View
+            style={[
+              styles.optionIconBadge,
+              compact && styles.optionIconBadgeCompact,
+              selected.iconBg ? { backgroundColor: selected.iconBg } : null,
+            ]}
+          >
+            <AppIcon
+              name={selected.icon}
+              color={selected.iconColor ?? colors.primary}
+              size={compact ? 12 : 14}
+            />
+          </View>
+        ) : null}
         <Text style={[styles.dropdownValue, compact && styles.dropdownValueCompact, !selected && styles.placeholder]} numberOfLines={1}>
           {displayLabel || placeholder}
         </Text>
@@ -74,19 +93,33 @@ export function Dropdown<T extends string>({
             <Text style={styles.optionsTitle}>{resolvedTitle}</Text>
             <ScrollView style={styles.optionsList} keyboardShouldPersistTaps="handled">
               {options.map((option) => (
-                <Pressable
-                  key={option.value}
-                  style={[styles.option, option.value === value && styles.optionSelected]}
-                  onPress={() => {
-                    onChange(option.value);
-                    setOpen(false);
-                  }}
-                >
-                  <Text style={[styles.optionText, option.value === value && styles.optionTextSelected]}>
-                    {option.label}
-                  </Text>
-                  {option.value === value ? <AppIcon name="check" color={colors.primary} size={16} /> : null}
-                </Pressable>
+                  <Pressable
+                    key={option.value}
+                    style={[styles.option, option.value === value && styles.optionSelected]}
+                    onPress={() => {
+                      onChange(option.value);
+                      setOpen(false);
+                    }}
+                  >
+                    {option.icon ? (
+                      <View
+                        style={[
+                          styles.optionIconBadge,
+                          option.iconBg ? { backgroundColor: option.iconBg } : null,
+                        ]}
+                      >
+                        <AppIcon
+                          name={option.icon}
+                          color={option.iconColor ?? colors.primary}
+                          size={15}
+                        />
+                      </View>
+                    ) : null}
+                    <Text style={[styles.optionText, option.value === value && styles.optionTextSelected]}>
+                      {option.label}
+                    </Text>
+                    {option.value === value ? <AppIcon name="check" color={colors.primary} size={16} /> : null}
+                  </Pressable>
               ))}
             </ScrollView>
             <Pressable style={styles.dismissButton} onPress={() => setOpen(false)}>
@@ -246,6 +279,21 @@ const createStyles = (colors: ThemeColors) =>
     },
     dropdownValue: { color: colors.ink, fontSize: 14, fontWeight: '600', flex: 1 },
     dropdownValueCompact: { fontSize: 12 },
+    optionIconBadge: {
+      width: 26,
+      height: 26,
+      borderRadius: 8,
+      backgroundColor: colors.primaryLight,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: 9,
+    },
+    optionIconBadgeCompact: {
+      width: 22,
+      height: 22,
+      borderRadius: 6,
+      marginRight: 7,
+    },
     placeholder: { color: colors.muted },
     iconRight: { marginLeft: 8 },
     modalBackdrop: { flex: 1, backgroundColor: colors.backdrop, justifyContent: 'center', padding: 24 },

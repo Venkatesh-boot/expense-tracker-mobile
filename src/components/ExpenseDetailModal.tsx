@@ -5,6 +5,8 @@ import { displayDate, formatMoney } from '../models';
 import { useTheme, useThemedStyles } from '../theme';
 import type { ThemeColors } from '../theme';
 import { AppIcon } from './AppIcon';
+import type { AppIconName } from './AppIcon';
+import { getCategoryIcon, getSubcategoryIcon } from './categoryIcons';
 
 export function ExpenseDetailModal({
   expense,
@@ -42,6 +44,11 @@ export function ExpenseDetailModal({
                 { backgroundColor: categoryColors[expense.category]?.bg ?? colors.primaryLight },
               ]}
             >
+              <AppIcon
+                name={getCategoryIcon(expense.category)}
+                color={categoryColors[expense.category]?.fg ?? colors.primary}
+                size={13}
+              />
               <Text
                 style={[
                   styles.categoryPillText,
@@ -63,7 +70,13 @@ export function ExpenseDetailModal({
             <View style={styles.detailsGrid}>
               <DetailItem label="Quantity" value={`${expense.quantity} ${expense.unit}`} styles={styles} />
               <DetailItem label="Date" value={displayDate(expense.date)} styles={styles} />
-              <DetailItem label="Subcategory" value={expense.subcategory} styles={styles} />
+              <DetailItem
+                label="Subcategory"
+                value={expense.subcategory}
+                icon={getSubcategoryIcon(expense.subcategory, expense.category)}
+                iconColor={colors.primary}
+                styles={styles}
+              />
               <DetailItem label="Paid by" value={memberName} styles={styles} />
             </View>
 
@@ -102,16 +115,25 @@ export function ExpenseDetailModal({
 function DetailItem({
   label,
   value,
+  icon,
+  iconColor,
   styles,
 }: {
   label: string;
   value: string;
+  icon?: AppIconName;
+  iconColor?: string;
   styles: ReturnType<typeof createStyles>;
 }) {
   return (
     <View style={styles.detailItem}>
       <Text style={styles.detailLabel}>{label}</Text>
-      <Text style={styles.detailValue}>{value}</Text>
+      <View style={styles.detailValueRow}>
+        {icon && iconColor ? <AppIcon name={icon} color={iconColor} size={13} /> : null}
+        <Text style={styles.detailValue} numberOfLines={1}>
+          {value}
+        </Text>
+      </View>
     </View>
   );
 }
@@ -139,6 +161,9 @@ const createStyles = (colors: ThemeColors) =>
       marginBottom: 14,
     },
     categoryPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
       backgroundColor: colors.primaryLight,
       borderRadius: 10,
       paddingHorizontal: 10,
@@ -181,7 +206,13 @@ const createStyles = (colors: ThemeColors) =>
       fontWeight: '700',
       marginBottom: 3,
     },
+    detailValueRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
     detailValue: {
+      flex: 1,
       color: colors.ink,
       fontSize: 13,
       fontWeight: '700',

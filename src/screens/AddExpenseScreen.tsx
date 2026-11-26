@@ -26,6 +26,7 @@ import { useTheme, useThemedStyles } from '../theme';
 import type { ThemeColors } from '../theme';
 import { AppIcon } from '../components/AppIcon';
 import { ChoiceChip } from '../components/ChoiceChip';
+import { getCategoryIcon, getSubcategoryIcon } from '../components/categoryIcons';
 
 type ReceiptDraftItem = {
   id: string;
@@ -56,7 +57,7 @@ export function AddExpenseScreen({
   onUpdate,
   onScanReceipt,
 }: AddExpenseProps) {
-  const { colors } = useTheme();
+  const { colors, categoryColors } = useTheme();
   const styles = useThemedStyles(createStyles);
   const isEditing = Boolean(editingExpense);
   const [title, setTitle] = useState(editingExpense?.title ?? '');
@@ -108,6 +109,9 @@ export function AddExpenseScreen({
   const subcategoryOptions = SUBCATEGORIES[category].map((value) => ({
     label: value,
     value,
+    icon: getSubcategoryIcon(value, category),
+    iconColor: categoryColors[category]?.fg,
+    iconBg: categoryColors[category]?.bg,
   }));
   const selectCategory = (value: ExpenseCategory) => {
     setCategory(value);
@@ -429,8 +433,15 @@ export function AddExpenseScreen({
                     <Dropdown
                       label=""
                       compact
+                      modalTitle="Category"
                       value={item.category}
-                      options={CATEGORIES.map((value) => ({ label: value, value }))}
+                      options={CATEGORIES.map((value) => ({
+                        label: value,
+                        value,
+                        icon: getCategoryIcon(value),
+                        iconColor: categoryColors[value]?.fg,
+                        iconBg: categoryColors[value]?.bg,
+                      }))}
                       onChange={(nextCategory) =>
                         updateReceiptItem(item.id, (row) => ({
                           ...row,
@@ -444,10 +455,14 @@ export function AddExpenseScreen({
                     <Dropdown
                       label=""
                       compact
+                      modalTitle="Subcategory"
                       value={item.subcategory}
                       options={SUBCATEGORIES[item.category].map((value) => ({
                         label: value,
                         value,
+                        icon: getSubcategoryIcon(value, item.category),
+                        iconColor: categoryColors[item.category]?.fg,
+                        iconBg: categoryColors[item.category]?.bg,
                       }))}
                       onChange={(nextSubcategory) =>
                         updateReceiptItem(item.id, (row) => ({
@@ -513,7 +528,13 @@ export function AddExpenseScreen({
             <Dropdown
               label="Category"
               value={category}
-              options={CATEGORIES.map((value) => ({ label: value, value }))}
+              options={CATEGORIES.map((value) => ({
+                label: value,
+                value,
+                icon: getCategoryIcon(value),
+                iconColor: categoryColors[value]?.fg,
+                iconBg: categoryColors[value]?.bg,
+              }))}
               onChange={selectCategory}
             />
             <Dropdown

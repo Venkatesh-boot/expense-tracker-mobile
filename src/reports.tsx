@@ -6,8 +6,9 @@ import { DatePickerField, Dropdown } from './controls';
 import type { DropdownOption } from './controls';
 import { buildChart, getBounds } from './reportUtils';
 import type { ChartDimension, ReportRange } from './reportUtils';
-import { useThemedStyles } from './theme';
+import { useTheme, useThemedStyles } from './theme';
 import type { ThemeColors } from './theme';
+import { getCategoryIcon, getSubcategoryIcon } from './components/categoryIcons';
 
 const ALL = '__all__';
 const RANGE_OPTIONS: DropdownOption<ReportRange>[] = [
@@ -35,6 +36,7 @@ export function ReportsScreen({
   members: FamilyMember[];
   currency: CurrencyCode;
 }) {
+  const { categoryColors } = useTheme();
   const styles = useThemedStyles(createStyles);
   const [range, setRange] = useState<ReportRange>('month');
   const [customStart, setCustomStart] = useState(todayString());
@@ -149,7 +151,13 @@ export function ReportsScreen({
           value={category}
           options={[
             ALL_OPTION,
-            ...CATEGORIES.map((value) => ({ label: value, value })),
+            ...CATEGORIES.map((value) => ({
+              label: value,
+              value,
+              icon: getCategoryIcon(value),
+              iconColor: categoryColors[value]?.fg,
+              iconBg: categoryColors[value]?.bg,
+            })),
           ]}
           onChange={changeCategory}
         />
@@ -158,7 +166,15 @@ export function ReportsScreen({
           value={subcategory}
           options={[
             ALL_OPTION,
-            ...availableSubcategories.map((value) => ({ label: value, value })),
+            ...availableSubcategories.map((value) => ({
+              label: value,
+              value,
+              icon: getSubcategoryIcon(value, category === ALL ? undefined : category),
+              iconColor:
+                category !== ALL ? categoryColors[category as ExpenseCategory]?.fg : undefined,
+              iconBg:
+                category !== ALL ? categoryColors[category as ExpenseCategory]?.bg : undefined,
+            })),
           ]}
           onChange={changeSubcategory}
         />

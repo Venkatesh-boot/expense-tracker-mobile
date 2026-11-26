@@ -21,6 +21,7 @@ import { useTheme, useThemedStyles } from '../theme';
 import type { ThemeColors } from '../theme';
 import { AppIcon } from '../components/AppIcon';
 import type { AppIconName } from '../components/AppIcon';
+import { getCategoryIcon, getSubcategoryIcon } from '../components/categoryIcons';
 import { DonutChart, TrendLineChart } from '../components/Charts';
 import type { LineChartPoint } from '../components/Charts';
 import { ExpenseRow } from '../components/ExpenseRow';
@@ -52,7 +53,7 @@ export function DashboardScreen({
   onSelectExpense,
   onDeleteExpense,
 }: DashboardScreenProps) {
-  const { colors } = useTheme();
+  const { colors, categoryColors } = useTheme();
   const styles = useThemedStyles(createStyles);
   const [trendMode, setTrendMode] = useState<'7d' | '6m' | 'pace'>('7d');
   const [chartType, setChartType] = useState<'line' | 'bar'>('line');
@@ -340,8 +341,25 @@ export function DashboardScreen({
 
         <View style={styles.kpiCard}>
           <View style={styles.kpiHeader}>
-            <View style={[styles.kpiIconBadge, { backgroundColor: colors.secondaryLight }]}>
-              <AppIcon name="wallet" color={colors.secondary} size={15} />
+            <View
+              style={[
+                styles.kpiIconBadge,
+                {
+                  backgroundColor: topCategory
+                    ? categoryColors[topCategory.category]?.bg ?? colors.secondaryLight
+                    : colors.secondaryLight,
+                },
+              ]}
+            >
+              <AppIcon
+                name={topCategory ? getCategoryIcon(topCategory.category) : 'wallet'}
+                color={
+                  topCategory
+                    ? categoryColors[topCategory.category]?.fg ?? colors.secondary
+                    : colors.secondary
+                }
+                size={15}
+              />
             </View>
             <Text style={styles.kpiTag}>{topCategory ? `${topCategory.percent}% share` : 'Top'}</Text>
           </View>
@@ -696,17 +714,39 @@ export function DashboardScreen({
                 <View style={styles.categoryLabelWrap}>
                   <View
                     style={[
-                      styles.categoryDot,
-                      { backgroundColor: DASHBOARD_CHART_COLORS[index % DASHBOARD_CHART_COLORS.length] },
+                      styles.categoryIconBadge,
+                      {
+                        backgroundColor:
+                          categoryColors[item.category]?.bg ?? colors.primaryLight,
+                      },
                     ]}
-                  />
-                  <View>
+                  >
+                    <AppIcon
+                      name={getCategoryIcon(item.category)}
+                      color={categoryColors[item.category]?.fg ?? colors.primary}
+                      size={14}
+                    />
+                  </View>
+                  <View style={styles.flex}>
                     <View style={styles.categoryTitleLine}>
+                      <View
+                        style={[
+                          styles.categoryDot,
+                          { backgroundColor: DASHBOARD_CHART_COLORS[index % DASHBOARD_CHART_COLORS.length] },
+                        ]}
+                      />
                       <Text style={styles.categoryName}>{item.category}</Text>
                       <Text style={styles.categoryCount}>{item.count}</Text>
                     </View>
                     {item.topSubcategory ? (
-                      <Text style={styles.categorySub}>Top: {item.topSubcategory}</Text>
+                      <View style={styles.categorySubRow}>
+                        <AppIcon
+                          name={getSubcategoryIcon(item.topSubcategory, item.category)}
+                          color={colors.muted}
+                          size={10}
+                        />
+                        <Text style={styles.categorySub}>Top: {item.topSubcategory}</Text>
+                      </View>
                     ) : null}
                   </View>
                 </View>
@@ -741,8 +781,17 @@ export function DashboardScreen({
                 onPress={() => onSelectExpense(expense)}
                 accessibilityRole="button"
               >
-                <View style={styles.rankBadge}>
-                  <Text style={styles.rankText}>#{index + 1}</Text>
+                <View
+                  style={[
+                    styles.rankBadge,
+                    { backgroundColor: categoryColors[expense.category]?.bg ?? colors.primaryLight },
+                  ]}
+                >
+                  <AppIcon
+                    name={getCategoryIcon(expense.category)}
+                    color={categoryColors[expense.category]?.fg ?? colors.primary}
+                    size={15}
+                  />
                 </View>
                 <View style={styles.flex}>
                   <Text style={styles.topPurchaseTitle} numberOfLines={1}>
@@ -1213,8 +1262,15 @@ const createStyles = (colors: ThemeColors) =>
     categoryStack: { flexDirection: 'row', height: 10, borderRadius: 6, overflow: 'hidden', marginBottom: 8 },
     categoryRow: { marginVertical: 10 },
     categoryNameRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 7, gap: 8 },
-    categoryLabelWrap: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
-    categoryDot: { width: 9, height: 9, borderRadius: 5 },
+    categoryLabelWrap: { flexDirection: 'row', alignItems: 'center', gap: 9, flex: 1 },
+    categoryIconBadge: {
+      width: 28,
+      height: 28,
+      borderRadius: 9,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    categoryDot: { width: 8, height: 8, borderRadius: 4 },
     categoryTitleLine: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     categoryCount: {
       color: colors.muted,
@@ -1225,7 +1281,8 @@ const createStyles = (colors: ThemeColors) =>
       borderRadius: 7,
     },
     categoryName: { color: colors.ink, fontSize: 13, fontWeight: '700' },
-    categorySub: { color: colors.muted, fontSize: 11, marginTop: 1 },
+    categorySubRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
+    categorySub: { color: colors.muted, fontSize: 11 },
     categoryValue: { color: colors.ink, fontSize: 12, fontWeight: '700' },
     progressTrack: { height: 7, borderRadius: 5, backgroundColor: colors.track, overflow: 'hidden' },
     progressFill: { height: 7, borderRadius: 5, backgroundColor: colors.primaryMid },

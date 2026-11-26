@@ -4,6 +4,8 @@ import type { CurrencyCode, Expense } from '../models';
 import { displayDate, formatMoney } from '../models';
 import { useTheme, useThemedStyles } from '../theme';
 import type { ThemeColors } from '../theme';
+import { AppIcon } from './AppIcon';
+import { getCategoryIcon, getSubcategoryIcon } from './categoryIcons';
 
 export function ExpenseRow({
   expense,
@@ -38,15 +40,20 @@ export function ExpenseRow({
         accessibilityLabel={`${expense.title}, ${formatMoney(expense.amount, currency)}`}
       >
         <View style={[styles.expenseIcon, { backgroundColor: badgeColor.bg }]}>
-          <Text style={[styles.expenseIconText, { color: badgeColor.fg }]}>
-            {expense.category.slice(0, 1).toUpperCase()}
-          </Text>
+          <AppIcon name={getCategoryIcon(expense.category)} color={badgeColor.fg} size={18} />
         </View>
         <View style={styles.expenseDescription}>
           <Text style={styles.expenseTitle} numberOfLines={1}>{expense.title}</Text>
-          <Text style={styles.expenseMeta}>
-            {expense.quantity} {expense.unit} · {expense.category} · {expense.subcategory} · {memberName} · {displayDate(expense.date)}
-          </Text>
+          <View style={styles.expenseMetaRow}>
+            <AppIcon
+              name={getSubcategoryIcon(expense.subcategory, expense.category)}
+              color={colors.muted}
+              size={11}
+            />
+            <Text style={styles.expenseMeta} numberOfLines={1}>
+              {expense.quantity} {expense.unit} · {expense.category} · {expense.subcategory} · {memberName} · {displayDate(expense.date)}
+            </Text>
+          </View>
           {hasNotes ? (
             <Text style={styles.expenseNotes} numberOfLines={1}>
               Note: {expense.notes.trim()}
@@ -111,7 +118,13 @@ const createStyles = (colors: ThemeColors) =>
       fontSize: 13,
       marginBottom: 4,
     },
+    expenseMetaRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
     expenseMeta: {
+      flex: 1,
       color: colors.muted,
       fontSize: 10,
     },
