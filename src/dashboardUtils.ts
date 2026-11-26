@@ -57,6 +57,26 @@ export type DashboardInsight = {
   text: string;
 };
 
+export type DonutSegment = {
+  sliceIndex: number;
+  startAngle: number;
+  sweepAngle: number;
+  color: string;
+};
+
+export type CumulativePacePoint = {
+  day: number;
+  label: string;
+  actual: number;
+  comparison: number | null;
+};
+
+export type CumulativePaceSummary = {
+  points: CumulativePacePoint[];
+  comparisonKind: 'prev_month' | 'budget' | 'none';
+  maxValue: number;
+};
+
 export type DashboardSummary = {
   todayKey: string;
   monthLabel: string;
@@ -96,6 +116,7 @@ export type DashboardSummary = {
   sixMonthSpending: DashboardMonthPoint[];
   sixMonthAverage: number;
   maxSixMonth: number;
+  cumulativePace: CumulativePaceSummary;
   insights: DashboardInsight[];
   recent: Expense[];
 };
@@ -207,6 +228,15 @@ export function buildDashboardSummary(
       ? sixMonthActive.reduce((sum, item) => sum + item.total, 0) / sixMonthActive.length
       : 0;
 
+  const cumulativePace = buildCumulativePaceSeries(
+    thisMonth,
+    prevMonth,
+    daysElapsed,
+    daysInMonth,
+    prevMonthLastDay,
+    preferences.monthlyBudget
+  );
+
   const insights = buildInsights({
     currency: preferences.currency,
     monthTotal,
@@ -261,9 +291,112 @@ export function buildDashboardSummary(
     sixMonthSpending,
     sixMonthAverage,
     maxSixMonth: Math.max(1, ...sixMonthSpending.map((month) => month.total)),
+    cumulativePace,
     insights,
     recent: expenses.slice(0, 5),
   };
+}
+
+/** Splits proportional pie/donut slices into <=180deg segments for pure-View rendering. */
+export function buildDonutSegments(
+  slices: { value: number; color: string }[]
+): DonutSegment[] {
+  const total = slices.reduce((sum, slice) => sum + Math.max(0, slice.value), 0);
+  if (total <= 0) return [];
+
+  const segments: DonutSegment[] = [];
+  let cursor = 0;
+
+  slices.forEach((slice, sliceIndex) => {
+    if (slice.value <= 0) return;
+    const sweep = (slice.value / total) * 360;
+    if (sweep > 180) {
+      segments.push({
+        sliceIndex,
+        startAngle: cursor,
+        sweepAngle: 180.5,
+        color: slice.color,
+      });
+      segments.push({
+        sliceIndex,
+        startAngle: cursor + 180,
+        sweepAngle: sweep - 180,
+        color: slice.color,
+      });
+    } else {
+      segments.push({
+        sliceIndex,
+        startAngle: cursor,
+        sweepAngle: sweep,
+        color: slice.color,
+      });
+    }
+    cursor += sweep;
+  });
+
+  return segments;
+}
+
+function buildCumulativePaceSeries(
+  thisMonth: Expense[],
+  prevMonth: Expense[],
+  daysElapsed: number,
+  daysInMonth: number,
+  prevMonthLastDay: number,
+  monthlyBudget?: number
+): CumulativePaceSummary {
+  const currentByDay = new Array<number>(daysElapsed + 1).fill(0);
+  for (const expense of thisMonth) {
+    const day = Number(expense.date.slice(8, 10));
+    if (day >= 1 && day <= daysElapsed) {
+      currentByDay[day] += expense.amount;
+    }
+  }
+
+  const prevByDay = new Array<number>(prevMonthLastDay + 1).fill(0);
+  for (const expense of prevMonth) {
+    const day = Number(expense.date.slice(8, 10));
+    if (day >= 1 && day <= prevMonthLastDay) {
+      prevByDay[day] += expense.amount;
+    }
+  }
+
+  const hasPrevMonth = prevMonth.length > 0;
+  const hasBudget = Boolean(monthlyBudget && Number.isFinite(monthlyBudget) && monthlyBudget > 0);
+  const comparisonKind: CumulativePaceSummary['comparisonKind'] = hasPrevMonth
+    ? 'prev_month'
+    : hasBudget
+      ? 'budget'
+      : 'none';
+
+  const points: CumulativePacePoint[] = [];
+  let runningActual = 0;
+  let runningPrev = 0;
+
+  for (let day = 1; day <= daysElapsed; day += 1) {
+    runningActual += currentByDay[day];
+    if (day <= prevMonthLastDay) {
+      runningPrev += prevByDay[day];
+    }
+    const comparison =
+      comparisonKind === 'prev_month'
+        ? runningPrev
+        : comparisonKind === 'budget' && monthlyBudget
+          ? (monthlyBudget / daysInMonth) * day
+          : null;
+    points.push({
+      day,
+      label: String(day),
+      actual: runningActual,
+      comparison,
+    });
+  }
+
+  const maxValue = Math.max(
+    1,
+    ...points.map((point) => Math.max(point.actual, point.comparison ?? 0))
+  );
+  return { points, comparisonKind, maxValue };
 }
 
 function sumAmounts(items: Expense[]): number {

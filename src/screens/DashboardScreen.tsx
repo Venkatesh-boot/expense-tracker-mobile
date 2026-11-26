@@ -20,6 +20,8 @@ import { buildDashboardSummary } from '../dashboardUtils';
 import { COLORS } from '../theme';
 import { AppIcon } from '../components/AppIcon';
 import type { AppIconName } from '../components/AppIcon';
+import { DonutChart, TrendLineChart } from '../components/Charts';
+import type { LineChartPoint } from '../components/Charts';
 import { ExpenseRow } from '../components/ExpenseRow';
 import { SectionHeading } from '../components/SectionHeading';
 import { DASHBOARD_CHART_COLORS } from './types';
@@ -49,7 +51,10 @@ export function DashboardScreen({
   onSelectExpense,
   onDeleteExpense,
 }: DashboardScreenProps) {
-  const [trendMode, setTrendMode] = useState<'7d' | '6m'>('7d');
+  const [trendMode, setTrendMode] = useState<'7d' | '6m' | 'pace'>('7d');
+  const [chartType, setChartType] = useState<'line' | 'bar'>('line');
+  const [selectedPointIndex, setSelectedPointIndex] = useState<number | null>(null);
+  const [selectedCategoryIndex, setSelectedCategoryIndex] = useState<number | null>(null);
   const [showAllCategories, setShowAllCategories] = useState(false);
   const [budgetModalOpen, setBudgetModalOpen] = useState(false);
   const [budgetInput, setBudgetInput] = useState('');
@@ -99,7 +104,54 @@ export function DashboardScreen({
     : summary.categoryTotals.slice(0, 5);
   const topCategory = summary.categoryTotals[0] ?? null;
   const currency = preferences.currency;
+  const currencySymbol = CURRENCY_SYMBOLS[currency];
   const sixMonthTotal = summary.sixMonthSpending.reduce((sum, item) => sum + item.total, 0);
+
+  const formatCompactAmount = (value: number): string => {
+    if (value >= 1_000_000) return `${currencySymbol}${(value / 1_000_000).toFixed(1)}M`;
+    if (value >= 1_000) return `${currencySymbol}${(value / 1_000).toFixed(1)}k`;
+    return `${currencySymbol}${Math.round(value)}`;
+  };
+
+  const trendPoints: LineChartPoint[] =
+    trendMode === '7d'
+      ? summary.weekSpending.map((day) => ({
+          key: day.date,
+          label: day.label,
+          value: day.total,
+          highlight: day.date === summary.todayKey,
+        }))
+      : trendMode === '6m'
+        ? summary.sixMonthSpending.map((month) => ({
+            key: month.monthKey,
+            label: month.label,
+            value: month.total,
+            highlight: month.isCurrent,
+          }))
+        : summary.cumulativePace.points.map((point) => ({
+            key: `day-${point.day}`,
+            label: point.label,
+            value: point.actual,
+            comparison: point.comparison,
+            highlight: point.day === summary.daysElapsed,
+          }));
+
+  const inspectedPoint =
+    selectedPointIndex !== null && trendPoints[selectedPointIndex]
+      ? trendPoints[selectedPointIndex]
+      : null;
+
+  const activeCategory =
+    selectedCategoryIndex !== null && summary.categoryTotals[selectedCategoryIndex]
+      ? summary.categoryTotals[selectedCategoryIndex]
+      : null;
+
+  const categorySlices = summary.categoryTotals.map((item, index) => ({
+    key: item.category,
+    label: item.category,
+    value: item.total,
+    color: DASHBOARD_CHART_COLORS[index % DASHBOARD_CHART_COLORS.length],
+  }));
 
   return (
     <ScrollView contentContainerStyle={styles.pageContent} showsVerticalScrollIndicator={false}>
@@ -355,43 +407,135 @@ export function DashboardScreen({
         <View style={styles.chartSummary}>
           <View style={styles.flex}>
             <Text style={styles.chartTotal}>
-              {formatMoney(trendMode === '7d' ? summary.weekTotal : sixMonthTotal, currency)}
+              {formatMoney(
+                trendMode === '7d'
+                  ? summary.weekTotal
+                  : trendMode === '6m'
+                    ? sixMonthTotal
+                    : summary.monthTotal,
+                currency
+              )}
             </Text>
             <Text style={styles.chartCaption}>
               {trendMode === '7d'
                 ? `Past 7 days · avg ${formatMoney(summary.weekDailyAverage, currency)}/day`
-                : `Last 6 months · avg ${formatMoney(summary.sixMonthAverage, currency)}/mo`}
+                : trendMode === '6m'
+                  ? `Last 6 months · avg ${formatMoney(summary.sixMonthAverage, currency)}/mo`
+                  : summary.cumulativePace.comparisonKind === 'prev_month'
+                    ? `Cumulative pace vs ${summary.prevMonthLabel}`
+                    : summary.cumulativePace.comparisonKind === 'budget'
+                      ? 'Cumulative pace vs monthly budget'
+                      : `Cumulative spend through day ${summary.daysElapsed}`}
             </Text>
           </View>
-          <View style={styles.segmentedControl}>
-            <Pressable
-              style={[styles.segmentButton, trendMode === '7d' && styles.segmentButtonActive]}
-              onPress={() => setTrendMode('7d')}
-            >
-              <Text style={[styles.segmentText, trendMode === '7d' && styles.segmentTextActive]}>
-                7D
-              </Text>
-            </Pressable>
-            <Pressable
-              style={[styles.segmentButton, trendMode === '6m' && styles.segmentButtonActive]}
-              onPress={() => setTrendMode('6m')}
-            >
-              <Text style={[styles.segmentText, trendMode === '6m' && styles.segmentTextActive]}>
-                6M
-              </Text>
-            </Pressable>
+          <View style={styles.chartControls}>
+            <View style={styles.segmentedControl}>
+              {(
+                [
+                  ['7d', '7D'],
+                  ['6m', '6M'],
+                  ['pace', 'Pace'],
+                ] as ['7d' | '6m' | 'pace', string][]
+              ).map(([mode, label]) => (
+                <Pressable
+                  key={mode}
+                  style={[styles.segmentButton, trendMode === mode && styles.segmentButtonActive]}
+                  onPress={() => {
+                    setTrendMode(mode);
+                    setSelectedPointIndex(null);
+                  }}
+                >
+                  <Text style={[styles.segmentText, trendMode === mode && styles.segmentTextActive]}>
+                    {label}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+            {trendMode !== 'pace' ? (
+              <View style={styles.segmentedControl}>
+                {(
+                  [
+                    ['line', 'Line'],
+                    ['bar', 'Bar'],
+                  ] as ['line' | 'bar', string][]
+                ).map(([type, label]) => (
+                  <Pressable
+                    key={type}
+                    style={[styles.segmentButton, chartType === type && styles.segmentButtonActive]}
+                    onPress={() => setChartType(type)}
+                  >
+                    <Text style={[styles.segmentText, chartType === type && styles.segmentTextActive]}>
+                      {label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
           </View>
         </View>
 
-        {trendMode === '7d' && summary.peakWeekDay ? (
-          <View style={styles.peakBanner}>
-            <Text style={styles.peakBannerText}>
-              Peak day: {summary.peakWeekDay.label} ({formatMoney(summary.peakWeekDay.total, currency)})
-            </Text>
-          </View>
-        ) : null}
+        <View style={styles.chartMetaRow}>
+          {inspectedPoint ? (
+            <View style={styles.peakBanner}>
+              <Text style={styles.peakBannerText}>
+                {trendMode === 'pace' ? `Day ${inspectedPoint.label}` : inspectedPoint.label}:{' '}
+                {formatMoney(inspectedPoint.value, currency)}
+                {inspectedPoint.comparison !== undefined && inspectedPoint.comparison !== null
+                  ? ` (vs ${formatMoney(inspectedPoint.comparison, currency)})`
+                  : ''}
+              </Text>
+            </View>
+          ) : trendMode === '7d' && summary.peakWeekDay ? (
+            <View style={styles.peakBanner}>
+              <Text style={styles.peakBannerText}>
+                Peak: {summary.peakWeekDay.label} ({formatMoney(summary.peakWeekDay.total, currency)})
+              </Text>
+            </View>
+          ) : trendMode === 'pace' && summary.cumulativePace.comparisonKind !== 'none' ? (
+            <View style={styles.paceLegendRow}>
+              <View style={styles.paceLegendItem}>
+                <View style={[styles.paceLegendSwatch, { backgroundColor: COLORS.primary }]} />
+                <Text style={styles.paceLegendText}>This month</Text>
+              </View>
+              <View style={styles.paceLegendItem}>
+                <View style={[styles.paceLegendSwatch, { backgroundColor: '#B0C2D4' }]} />
+                <Text style={styles.paceLegendText}>
+                  {summary.cumulativePace.comparisonKind === 'prev_month'
+                    ? summary.prevMonthLabel
+                    : 'Budget pace'}
+                </Text>
+              </View>
+            </View>
+          ) : null}
+        </View>
 
-        {trendMode === '7d' ? (
+        {trendMode === 'pace' || chartType === 'line' ? (
+          <TrendLineChart
+            points={trendPoints}
+            lineColor={COLORS.primary}
+            comparisonColor="#B0C2D4"
+            referenceValue={
+              trendMode === '7d'
+                ? summary.weekDailyAverage
+                : trendMode === '6m'
+                  ? summary.sixMonthAverage
+                  : undefined
+            }
+            referenceLabel={
+              trendMode === '7d' && summary.weekDailyAverage > 0
+                ? `Avg ${formatCompactAmount(summary.weekDailyAverage)}`
+                : trendMode === '6m' && summary.sixMonthAverage > 0
+                  ? `Avg ${formatCompactAmount(summary.sixMonthAverage)}`
+                  : undefined
+            }
+            selectedIndex={selectedPointIndex}
+            onSelectPoint={(idx) =>
+              setSelectedPointIndex((current) => (current === idx ? null : idx))
+            }
+            formatShortValue={formatCompactAmount}
+            showAllLabels={trendMode !== 'pace'}
+          />
+        ) : trendMode === '7d' ? (
           <View style={styles.weekChart}>
             {summary.weekSpending.map((day) => (
               <View key={day.date} style={styles.weekColumn}>
@@ -476,20 +620,75 @@ export function DashboardScreen({
         </View>
       ) : (
         <View style={styles.categoryCard}>
+          <View style={styles.donutSection}>
+            <DonutChart
+              slices={categorySlices}
+              size={136}
+              holeRatio={0.62}
+              centerTopLabel={activeCategory ? activeCategory.category : 'Total'}
+              centerValue={formatCompactAmount(
+                activeCategory ? activeCategory.total : summary.monthTotal
+              )}
+              centerSubLabel={
+                activeCategory
+                  ? `${activeCategory.percent}% share`
+                  : `${summary.categoryTotals.length} ${summary.categoryTotals.length === 1 ? 'category' : 'categories'}`
+              }
+              selectedIndex={selectedCategoryIndex}
+              onSelectSlice={setSelectedCategoryIndex}
+            />
+            <View style={styles.donutLegend}>
+              {summary.categoryTotals.slice(0, 4).map((item, index) => {
+                const selected = selectedCategoryIndex === index;
+                return (
+                  <Pressable
+                    key={item.category}
+                    style={[styles.donutLegendRow, selected && styles.donutLegendRowSelected]}
+                    onPress={() =>
+                      setSelectedCategoryIndex((current) => (current === index ? null : index))
+                    }
+                  >
+                    <View
+                      style={[
+                        styles.categoryDot,
+                        { backgroundColor: DASHBOARD_CHART_COLORS[index % DASHBOARD_CHART_COLORS.length] },
+                      ]}
+                    />
+                    <Text style={styles.donutLegendName} numberOfLines={1}>
+                      {item.category}
+                    </Text>
+                    <Text style={styles.donutLegendPct}>{item.percent}%</Text>
+                  </Pressable>
+                );
+              })}
+              {summary.categoryTotals.length > 4 ? (
+                <Text style={styles.donutLegendMore}>
+                  +{summary.categoryTotals.length - 4} more below
+                </Text>
+              ) : null}
+            </View>
+          </View>
+
           <View style={styles.categoryStack} accessibilityLabel="Monthly spending share by category">
             {summary.categoryTotals.map((item, index) => (
               <View
                 key={item.category}
                 style={{
                   width: `${(item.total / summary.monthTotal) * 100}%`,
-                  height: 11,
+                  height: 10,
                   backgroundColor: DASHBOARD_CHART_COLORS[index % DASHBOARD_CHART_COLORS.length],
                 }}
               />
             ))}
           </View>
           {visibleCategories.map((item, index) => (
-            <View key={item.category} style={styles.categoryRow}>
+            <Pressable
+              key={item.category}
+              style={styles.categoryRow}
+              onPress={() =>
+                setSelectedCategoryIndex((current) => (current === index ? null : index))
+              }
+            >
               <View style={styles.categoryNameRow}>
                 <View style={styles.categoryLabelWrap}>
                   <View
@@ -523,7 +722,7 @@ export function DashboardScreen({
                   ]}
                 />
               </View>
-            </View>
+            </Pressable>
           ))}
         </View>
       )}
@@ -563,10 +762,27 @@ export function DashboardScreen({
           <SectionHeading title="Family split (this month)" action="Manage" onAction={onOpenFamily} />
           <View style={styles.categoryCard}>
             {summary.memberTotals.length > 1 ? (
-              <Text style={styles.equalShareNote}>
-                Equal share across {summary.memberTotals.length} members:{' '}
-                {formatMoney(summary.equalMemberShare, currency)} each
-              </Text>
+              <>
+                <View style={styles.categoryStack} accessibilityLabel="Family spending split">
+                  {summary.memberTotals
+                    .filter((item) => item.total > 0)
+                    .map((item, index) => (
+                      <View
+                        key={item.id}
+                        style={{
+                          width: `${(item.total / summary.monthTotal) * 100}%`,
+                          height: 10,
+                          backgroundColor:
+                            DASHBOARD_CHART_COLORS[(index + 1) % DASHBOARD_CHART_COLORS.length],
+                        }}
+                      />
+                    ))}
+                </View>
+                <Text style={styles.equalShareNote}>
+                  Equal share across {summary.memberTotals.length} members:{' '}
+                  {formatMoney(summary.equalMemberShare, currency)} each
+                </Text>
+              </>
             ) : null}
             {summary.memberTotals.map((item, index) => (
               <View key={item.id} style={styles.categoryRow}>
@@ -927,21 +1143,22 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  chartSummary: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10 },
+  chartSummary: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 },
   chartTotal: { color: COLORS.ink, fontSize: 20, fontWeight: '800' },
   chartCaption: { color: COLORS.muted, fontSize: 11, marginTop: 2 },
+  chartControls: { alignItems: 'flex-end', gap: 6 },
   segmentedControl: {
     flexDirection: 'row',
     backgroundColor: '#F1F4F7',
     borderRadius: 10,
     padding: 3,
   },
-  segmentButton: { paddingHorizontal: 11, paddingVertical: 5, borderRadius: 8 },
+  segmentButton: { paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8 },
   segmentButtonActive: { backgroundColor: COLORS.white },
   segmentText: { color: COLORS.muted, fontSize: 11, fontWeight: '700' },
   segmentTextActive: { color: COLORS.primary, fontWeight: '800' },
+  chartMetaRow: { marginTop: 10, minHeight: 24, justifyContent: 'center' },
   peakBanner: {
-    marginTop: 10,
     alignSelf: 'flex-start',
     backgroundColor: COLORS.primaryLight,
     paddingHorizontal: 10,
@@ -949,7 +1166,11 @@ const styles = StyleSheet.create({
     borderRadius: 9,
   },
   peakBannerText: { color: COLORS.primary, fontSize: 11, fontWeight: '700' },
-  weekChart: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: 16 },
+  paceLegendRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  paceLegendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  paceLegendSwatch: { width: 12, height: 4, borderRadius: 2 },
+  paceLegendText: { color: COLORS.muted, fontSize: 11, fontWeight: '600' },
+  weekChart: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: 14 },
   weekColumn: { flex: 1, alignItems: 'center', minWidth: 0 },
   weekAmount: { color: COLORS.muted, fontSize: 8, height: 12, textAlign: 'center', width: '100%' },
   weekBarTrack: { height: 80, width: '60%', justifyContent: 'flex-end', alignItems: 'center' },
@@ -965,7 +1186,26 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  categoryStack: { flexDirection: 'row', height: 11, borderRadius: 6, overflow: 'hidden', marginBottom: 8 },
+  donutSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    marginBottom: 16,
+  },
+  donutLegend: { flex: 1, gap: 6 },
+  donutLegendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+    borderRadius: 8,
+  },
+  donutLegendRowSelected: { backgroundColor: COLORS.primaryLight },
+  donutLegendName: { flex: 1, color: COLORS.ink, fontSize: 12, fontWeight: '600' },
+  donutLegendPct: { color: COLORS.muted, fontSize: 11, fontWeight: '700' },
+  donutLegendMore: { color: COLORS.muted, fontSize: 11, paddingHorizontal: 6, marginTop: 2 },
+  categoryStack: { flexDirection: 'row', height: 10, borderRadius: 6, overflow: 'hidden', marginBottom: 8 },
   categoryRow: { marginVertical: 10 },
   categoryNameRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 7, gap: 8 },
   categoryLabelWrap: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },

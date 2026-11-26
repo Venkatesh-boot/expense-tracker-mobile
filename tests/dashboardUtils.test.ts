@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildDashboardSummary } from '../src/dashboardUtils';
+import { buildDashboardSummary, buildDonutSegments } from '../src/dashboardUtils';
 import type { Expense, FamilyMember, Preferences } from '../src/domain';
 
 const MEMBERS: FamilyMember[] = [
@@ -101,4 +101,43 @@ test('buildDashboardSummary handles over-budget and empty history gracefully', (
   assert.equal(summary.budget.safeDailyPace, 0);
   assert.equal(summary.momDeltaPercent, null);
   assert.ok(summary.insights.some((item) => item.id === 'budget' && item.tone === 'warning'));
+});
+
+test('buildDonutSegments splits >180deg slices and covers 360deg', () => {
+  const segments = buildDonutSegments([
+    { value: 75, color: '#226D5A' },
+    { value: 25, color: '#528AC7' },
+  ]);
+  assert.equal(segments.length, 3);
+  assert.equal(segments[0].sliceIndex, 0);
+  assert.equal(segments[0].startAngle, 0);
+  assert.equal(segments[0].sweepAngle, 180.5);
+  assert.equal(segments[1].sliceIndex, 0);
+  assert.equal(segments[1].startAngle, 180);
+  assert.equal(segments[1].sweepAngle, 90);
+  assert.equal(segments[2].sliceIndex, 1);
+  assert.equal(segments[2].startAngle, 270);
+  assert.equal(segments[2].sweepAngle, 90);
+
+  assert.deepEqual(buildDonutSegments([]), []);
+});
+
+test('buildDashboardSummary builds cumulative pace against previous month and budget', () => {
+  const now = new Date(2026, 10, 4, 12, 0, 0); // 2026-11-04
+  const expenses: Expense[] = [
+    makeExpense({ id: '1', date: '2026-11-01', amount: 100 }),
+    makeExpense({ id: '2', date: '2026-11-03', amount: 150 }),
+    makeExpense({ id: '3', date: '2026-10-02', amount: 80 }),
+  ];
+
+  const withPrev = buildDashboardSummary(expenses, MEMBERS, PREFS, now);
+  assert.equal(withPrev.cumulativePace.comparisonKind, 'prev_month');
+  assert.equal(withPrev.cumulativePace.points.length, 4);
+  assert.equal(withPrev.cumulativePace.points[0].actual, 100);
+  assert.equal(withPrev.cumulativePace.points[2].actual, 250);
+  assert.equal(withPrev.cumulativePace.points[2].comparison, 80);
+
+  const budgetOnly = buildDashboardSummary(expenses.slice(0, 2), MEMBERS, PREFS, now);
+  assert.equal(budgetOnly.cumulativePace.comparisonKind, 'budget');
+  assert.equal(Math.round(budgetOnly.cumulativePace.points[2].comparison ?? 0), 100);
 });
