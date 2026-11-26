@@ -863,8 +863,9 @@ export function DashboardScreen({
         animationType="fade"
         onRequestClose={() => setBudgetModalOpen(false)}
       >
-        <Pressable style={styles.modalBackdrop} onPress={() => setBudgetModalOpen(false)}>
-          <Pressable style={styles.modalCard} onPress={() => undefined}>
+        <View style={styles.modalBackdrop}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setBudgetModalOpen(false)} />
+          <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Monthly family budget</Text>
             <Text style={styles.modalHint}>
               Set a monthly target ({CURRENCY_SYMBOLS[currency]}) to see remaining balance and safe daily pace.
@@ -905,8 +906,8 @@ export function DashboardScreen({
                 <Text style={styles.modalSaveText}>{savingBudget ? 'Saving…' : 'Save'}</Text>
               </Pressable>
             </View>
-          </Pressable>
-        </Pressable>
+          </View>
+        </View>
       </Modal>
     </ScrollView>
   );

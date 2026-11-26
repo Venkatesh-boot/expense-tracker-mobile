@@ -29,35 +29,35 @@ export function ExpenseRow({
   };
 
   return (
-    <Pressable
-      style={[styles.expenseRow, last && styles.noBorder]}
-      onPress={onPress ? () => onPress(expense) : undefined}
-      accessibilityRole={onPress ? 'button' : undefined}
-      accessibilityLabel={`${expense.title}, ${formatMoney(expense.amount, currency)}`}
-    >
-      <View style={[styles.expenseIcon, { backgroundColor: badgeColor.bg }]}>
-        <Text style={[styles.expenseIconText, { color: badgeColor.fg }]}>
-          {expense.category.slice(0, 1).toUpperCase()}
-        </Text>
-      </View>
-      <View style={styles.expenseDescription}>
-        <Text style={styles.expenseTitle} numberOfLines={1}>{expense.title}</Text>
-        <Text style={styles.expenseMeta}>
-          {expense.quantity} {expense.unit} · {expense.category} · {expense.subcategory} · {memberName} · {displayDate(expense.date)}
-        </Text>
-        {hasNotes ? (
-          <Text style={styles.expenseNotes} numberOfLines={1}>
-            Note: {expense.notes.trim()}
+    <View style={[styles.expenseRow, last && styles.noBorder]}>
+      <Pressable
+        style={styles.expenseMain}
+        onPress={onPress ? () => onPress(expense) : undefined}
+        disabled={!onPress}
+        accessibilityRole={onPress ? 'button' : undefined}
+        accessibilityLabel={`${expense.title}, ${formatMoney(expense.amount, currency)}`}
+      >
+        <View style={[styles.expenseIcon, { backgroundColor: badgeColor.bg }]}>
+          <Text style={[styles.expenseIconText, { color: badgeColor.fg }]}>
+            {expense.category.slice(0, 1).toUpperCase()}
           </Text>
-        ) : null}
-      </View>
+        </View>
+        <View style={styles.expenseDescription}>
+          <Text style={styles.expenseTitle} numberOfLines={1}>{expense.title}</Text>
+          <Text style={styles.expenseMeta}>
+            {expense.quantity} {expense.unit} · {expense.category} · {expense.subcategory} · {memberName} · {displayDate(expense.date)}
+          </Text>
+          {hasNotes ? (
+            <Text style={styles.expenseNotes} numberOfLines={1}>
+              Note: {expense.notes.trim()}
+            </Text>
+          ) : null}
+        </View>
+      </Pressable>
       <View style={styles.expenseAmountWrap}>
         <Text style={styles.expenseAmount}>{formatMoney(expense.amount, currency)}</Text>
         <Pressable
-          onPress={(event) => {
-            event.stopPropagation?.();
-            onDelete(expense);
-          }}
+          onPress={() => onDelete(expense)}
           hitSlop={8}
           accessibilityRole="button"
           accessibilityLabel={`Delete ${expense.title}`}
@@ -65,7 +65,7 @@ export function ExpenseRow({
           <Text style={styles.deleteText}>Delete</Text>
         </Pressable>
       </View>
-    </Pressable>
+    </View>
   );
 }
 
@@ -78,6 +78,12 @@ const createStyles = (colors: ThemeColors) =>
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
       paddingVertical: 11,
+    },
+    expenseMain: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      minWidth: 0,
     },
     noBorder: {
       borderBottomWidth: 0,

@@ -68,8 +68,9 @@ export function Dropdown<T extends string>({
         animationType="fade"
         onRequestClose={() => setOpen(false)}
       >
-        <Pressable style={styles.modalBackdrop} onPress={() => setOpen(false)}>
-          <Pressable style={styles.optionsCard} onPress={() => undefined}>
+        <View style={styles.modalBackdrop}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setOpen(false)} />
+          <View style={styles.optionsCard}>
             <Text style={styles.optionsTitle}>{resolvedTitle}</Text>
             <ScrollView style={styles.optionsList} keyboardShouldPersistTaps="handled">
               {options.map((option) => (
@@ -91,8 +92,8 @@ export function Dropdown<T extends string>({
             <Pressable style={styles.dismissButton} onPress={() => setOpen(false)}>
               <Text style={styles.dismissText}>Close</Text>
             </Pressable>
-          </Pressable>
-        </Pressable>
+          </View>
+        </View>
       </Modal>
     </View>
   );
@@ -182,8 +183,9 @@ export function DatePickerField({
       </Pressable>
       {Platform.OS === 'ios' ? (
         <Modal transparent visible={iosOpen} animationType="slide" onRequestClose={() => setIosOpen(false)}>
-          <Pressable style={styles.modalBackdrop} onPress={() => setIosOpen(false)}>
-            <Pressable style={styles.iosDateCard} onPress={() => undefined}>
+          <View style={styles.modalBackdrop}>
+            <Pressable style={StyleSheet.absoluteFill} onPress={() => setIosOpen(false)} />
+            <View style={styles.iosDateCard}>
               <View style={styles.iosDateHeader}>
                 <Text style={styles.optionsTitle}>{label}</Text>
                 <Pressable onPress={() => setIosOpen(false)}>
@@ -197,8 +199,8 @@ export function DatePickerField({
                 onChange={handleChange}
                 maximumDate={new Date(2100, 11, 31)}
               />
-            </Pressable>
-          </Pressable>
+            </View>
+          </View>
         </Modal>
       ) : null}
     </View>

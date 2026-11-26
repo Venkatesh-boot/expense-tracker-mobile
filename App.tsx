@@ -62,63 +62,72 @@ export default function App() {
   useEffect(() => {
     if (themePreference !== 'auto') return;
 
-    const refreshClock = () => setClockNow(new Date());
-    refreshClock();
+    setClockNow(new Date());
+    let timer: ReturnType<typeof setTimeout> | null = null;
 
-    const timer = setTimeout(refreshClock, getNextThemeChangeDelayMs(new Date()));
+    const scheduleNext = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        setClockNow(new Date());
+        scheduleNext();
+      }, getNextThemeChangeDelayMs(new Date()));
+    };
+
+    scheduleNext();
     const subscription = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
-        refreshClock();
+        setClockNow(new Date());
+        scheduleNext();
       }
     });
 
     return () => {
-      clearTimeout(timer);
+      if (timer) clearTimeout(timer);
       subscription.remove();
     };
-  }, [themePreference, clockNow]);
+  }, [themePreference]);
 
   return (
-      <ThemeProvider mode={resolvedTheme}>
-        <AppShell preferences={preferences} setPreferences={setPreferences} />
-      </ThemeProvider>
-      );
+    <ThemeProvider mode={resolvedTheme}>
+      <AppShell preferences={preferences} setPreferences={setPreferences} />
+    </ThemeProvider>
+  );
 }
 
-      function AppShell({
-        preferences,
-        setPreferences,
+function AppShell({
+  preferences,
+  setPreferences,
 }: {
-        preferences: Preferences;
-      setPreferences: React.Dispatch<React.SetStateAction<Preferences>>;
+  preferences: Preferences;
+  setPreferences: React.Dispatch<React.SetStateAction<Preferences>>;
 }) {
-  const {colors, isDark} = useTheme();
-        const styles = useThemedStyles(createStyles);
-        const [screen, setScreen] = useState<AppScreen>('home');
-          const [returnScreen, setReturnScreen] = useState<AppScreen>('home');
-            const [expenses, setExpenses] = useState<Expense[]>([]);
-            const [members, setMembers] = useState<FamilyMember[]>([]);
-            const [ready, setReady] = useState(false);
-            const [loadError, setLoadError] = useState('');
-            const [menuOpen, setMenuOpen] = useState(false);
-            const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
-            const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const { colors, isDark } = useTheme();
+  const styles = useThemedStyles(createStyles);
+  const [screen, setScreen] = useState<AppScreen>('home');
+  const [returnScreen, setReturnScreen] = useState<AppScreen>('home');
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [members, setMembers] = useState<FamilyMember[]>([]);
+  const [ready, setReady] = useState(false);
+  const [loadError, setLoadError] = useState('');
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
 
-            const memberNames = useMemo(
+  const memberNames = useMemo(
     () => new Map(members.map((member) => [member.id, member.name])),
-            [members]
-            );
+    [members]
+  );
 
   const refresh = useCallback(async () => {
     const [savedExpenses, savedMembers, savedPreferences] = await Promise.all([
-            loadExpenses(),
-            loadMembers(),
-            loadPreferences(),
-            ]);
-            setExpenses(savedExpenses);
-            setMembers(savedMembers);
-            setPreferences(savedPreferences);
-  }, []);
+      loadExpenses(),
+      loadMembers(),
+      loadPreferences(),
+    ]);
+    setExpenses(savedExpenses);
+    setMembers(savedMembers);
+    setPreferences(savedPreferences);
+  }, [setPreferences]);
 
   const start = useCallback(async () => {
               setLoadError('');

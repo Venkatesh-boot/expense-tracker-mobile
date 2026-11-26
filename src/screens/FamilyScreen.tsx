@@ -207,8 +207,9 @@ export function FamilyScreen({
         animationType="fade"
         onRequestClose={() => setRenamingMember(null)}
       >
-        <Pressable style={styles.modalBackdrop} onPress={() => setRenamingMember(null)}>
-          <Pressable style={styles.modalCard} onPress={() => undefined}>
+        <View style={styles.modalBackdrop}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setRenamingMember(null)} />
+          <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Rename family member</Text>
             <TextInput
               style={styles.input}
@@ -231,8 +232,8 @@ export function FamilyScreen({
                 <Text style={styles.modalSaveText}>{saving ? 'Saving…' : 'Save name'}</Text>
               </Pressable>
             </View>
-          </Pressable>
-        </Pressable>
+          </View>
+        </View>
       </Modal>
 
       <Modal
@@ -241,8 +242,9 @@ export function FamilyScreen({
         animationType="fade"
         onRequestClose={() => setRemovingMember(null)}
       >
-        <Pressable style={styles.modalBackdrop} onPress={() => setRemovingMember(null)}>
-          <Pressable style={styles.modalCard} onPress={() => undefined}>
+        <View style={styles.modalBackdrop}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setRemovingMember(null)} />
+          <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Remove {removingMember?.name}?</Text>
             <Text style={styles.modalCopy}>
               {removingCount > 0
@@ -275,8 +277,8 @@ export function FamilyScreen({
                 <Text style={styles.modalSaveText}>{saving ? 'Removing…' : 'Remove'}</Text>
               </Pressable>
             </View>
-          </Pressable>
-        </Pressable>
+          </View>
+        </View>
       </Modal>
     </ScrollView>
   );

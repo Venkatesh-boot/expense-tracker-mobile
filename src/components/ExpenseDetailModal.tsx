@@ -32,8 +32,9 @@ export function ExpenseDetailModal({
       animationType="fade"
       onRequestClose={onClose}
     >
-      <Pressable style={styles.backdrop} onPress={onClose}>
-        <Pressable style={styles.card} onPress={() => undefined}>
+      <View style={styles.backdrop}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+        <View style={styles.card}>
           <View style={styles.header}>
             <View
               style={[
@@ -92,8 +93,8 @@ export function ExpenseDetailModal({
               <Text style={styles.editButtonText}>Edit expense</Text>
             </Pressable>
           </View>
-        </Pressable>
-      </Pressable>
+        </View>
+      </View>
     </Modal>
   );
 }

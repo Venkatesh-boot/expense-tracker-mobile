@@ -1,12 +1,12 @@
 export type AppScreen = 'home' | 'expenses' | 'add' | 'family' | 'reports' | 'settings';
 
 export const DASHBOARD_CHART_COLORS = [
-  '#4F46E5',
-  '#0EA5E9',
+  '#2563EB',
+  '#06B6D4',
   '#10B981',
   '#F59E0B',
-  '#EC4899',
-  '#8B5CF6',
+  '#F43F5E',
+  '#0284C7',
   '#F97316',
   '#14B8A6',
 ];
