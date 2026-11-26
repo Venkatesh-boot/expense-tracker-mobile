@@ -326,6 +326,34 @@ export type BackupDocument = {
   expenses: Expense[];
 };
 
+export type SyncMemberRecord = FamilyMember & {
+  updatedAt: string;
+};
+
+export type SyncExpenseRecord = Expense & {
+  updatedAt: string;
+  deletedAt: string | null;
+};
+
+export type SyncSnapshot = {
+  app: 'family-expense-tracker';
+  syncVersion: 1;
+  deviceId: string;
+  exportedAt: string;
+  currency: CurrencyCode;
+  members: SyncMemberRecord[];
+  expenses: SyncExpenseRecord[];
+};
+
+export type SyncMergeStats = {
+  membersAdded: number;
+  membersUpdated: number;
+  expensesAdded: number;
+  expensesUpdated: number;
+  expensesDeleted: number;
+  currencyAdopted: boolean;
+};
+
 export const CURRENCIES: CurrencyCode[] = ['INR', 'USD', 'EUR', 'GBP'];
 
 export const CURRENCY_SYMBOLS: Record<CurrencyCode, string> = {

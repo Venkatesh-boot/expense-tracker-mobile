@@ -23,6 +23,7 @@ type SettingsScreenProps = {
   onExport: () => Promise<void>;
   onExportCsv: () => Promise<void>;
   onImport: () => Promise<void>;
+  onOpenSync: () => void;
 };
 
 export function SettingsScreen({
@@ -32,6 +33,7 @@ export function SettingsScreen({
   onExport,
   onExportCsv,
   onImport,
+  onOpenSync,
 }: SettingsScreenProps) {
   const { colors } = useTheme();
   const styles = useThemedStyles(createStyles);
@@ -165,14 +167,17 @@ export function SettingsScreen({
 
       <SectionHeading title="Backup & export" />
       <View style={styles.infoCard}>
-        <Text style={styles.infoTitle}>Manual backup & spreadsheet export</Text>
+        <Text style={styles.infoTitle}>Wi-Fi sync & manual backup</Text>
         <Text style={styles.infoText}>
-          Export creates a JSON backup you can share or download to move data to another device. Import merges new expenses and members without deleting existing data. You can also export a CSV spreadsheet for Excel or Google Sheets.
+          Use 1-tap Wi-Fi sync to merge expenses directly with another phone at home, or export/import JSON backups and CSV spreadsheets manually.
         </Text>
         {transferring ? (
           <ActivityIndicator color={colors.primary} style={styles.transferSpinner} />
         ) : (
           <View style={styles.transferStack}>
+            <Pressable style={styles.secondaryButton} onPress={onOpenSync}>
+              <Text style={styles.secondaryButtonText}>Open Wi-Fi family sync</Text>
+            </Pressable>
             <View style={styles.transferButtons}>
               <Pressable style={styles.secondaryButton} onPress={() => void transfer('export')}>
                 <Text style={styles.secondaryButtonText}>Export JSON</Text>

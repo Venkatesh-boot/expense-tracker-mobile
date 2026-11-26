@@ -19,6 +19,7 @@
     "src/receiptParser.ts",
     "src/transferUtils.ts",
     "src/reportUtils.ts",
+    "src/syncUtils.ts",
     "tests/**/*.ts"
   ]
 }

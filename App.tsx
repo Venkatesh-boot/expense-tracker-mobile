@@ -41,6 +41,7 @@ import { AddExpenseScreen } from './src/screens/AddExpenseScreen';
 import { FamilyScreen } from './src/screens/FamilyScreen';
 import { PriceTrendsScreen } from './src/screens/PriceTrendsScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
+import { WifiSyncScreen } from './src/screens/WifiSyncScreen';
 import type { AppScreen } from './src/screens/types';
 import { ReportsScreen } from './src/reports';
 import { scanReceipt } from './src/receipt';
@@ -412,6 +413,14 @@ function AppShell({
                       onAddMember={saveFamilyMember}
                       onRenameMember={handleRenameMember}
                       onRemoveMember={handleRemoveMember}
+                      onOpenSync={() => setScreen('sync')}
+                    />
+                  )}
+                  {screen === 'sync' && (
+                    <WifiSyncScreen
+                      preferences={preferences}
+                      onSyncComplete={refresh}
+                      onOpenSettings={() => setScreen('settings')}
                     />
                   )}
                   {screen === 'reports' && (
@@ -438,6 +447,7 @@ function AppShell({
                       onExport={exportBackup}
                       onExportCsv={exportCsv}
                       onImport={handleImport}
+                      onOpenSync={() => setScreen('sync')}
                     />
                   )}
                 </View>
@@ -484,6 +494,7 @@ function AppShell({
                         ['prices', 'trend', 'Price trends'],
                         ['reports', 'chart', 'Reports'],
                         ['family', 'family', 'Family members'],
+                        ['sync', 'wifi', 'Wi-Fi sync'],
                         ['settings', 'settings', 'Settings'],
                       ] as [AppScreen, AppIconName, string][]).map(([target, icon, label]) => {
                         const active = screen === target;

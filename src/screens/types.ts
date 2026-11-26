@@ -3,6 +3,7 @@ export type AppScreen =
   | 'expenses'
   | 'add'
   | 'family'
+  | 'sync'
   | 'reports'
   | 'prices'
   | 'settings';

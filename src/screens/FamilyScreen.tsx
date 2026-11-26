@@ -23,6 +23,7 @@ type FamilyScreenProps = {
   onAddMember: (name: string) => Promise<void>;
   onRenameMember: (id: string, name: string) => Promise<void>;
   onRemoveMember: (id: string, reassignToId: string) => Promise<void>;
+  onOpenSync: () => void;
 };
 
 export function FamilyScreen({
@@ -32,6 +33,7 @@ export function FamilyScreen({
   onAddMember,
   onRenameMember,
   onRemoveMember,
+  onOpenSync,
 }: FamilyScreenProps) {
   const { colors } = useTheme();
   const styles = useThemedStyles(createStyles);
@@ -195,10 +197,13 @@ export function FamilyScreen({
       </View>
 
       <View style={styles.infoCard}>
-        <Text style={styles.infoTitle}>No account or server needed</Text>
+        <Text style={styles.infoTitle}>Sync phones on home Wi-Fi</Text>
         <Text style={styles.infoText}>
-          Members and expenses are saved only on this device. To share them with another family phone, export a backup in Settings and import it there.
+          No account or cloud server needed. Sync expenses between family phones directly over the same Wi-Fi using a 4-digit PIN, or import/export backups in Settings.
         </Text>
+        <Pressable style={styles.primaryButton} onPress={onOpenSync}>
+          <Text style={styles.primaryButtonText}>Open Wi-Fi family sync</Text>
+        </Pressable>
       </View>
 
       <Modal
