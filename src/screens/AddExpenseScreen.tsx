@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -11,11 +11,19 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import type { Expense, ExpenseCategory, FamilyMember, Preferences } from '../models';
+import type {
+  Expense,
+  ExpenseCategory,
+  FamilyMember,
+  Preferences,
+  ProductSuggestion,
+} from '../models';
 import {
+  buildProductSuggestions,
   buildUnitOptions,
   CATEGORIES,
   createId,
+  filterProductSuggestions,
   sanitizeQuantityInput,
   SUBCATEGORIES,
   todayString,
@@ -39,6 +47,7 @@ type ReceiptDraftItem = {
 };
 
 type AddExpenseProps = {
+  expenses: Expense[];
   members: FamilyMember[];
   preferences: Preferences;
   editingExpense?: Expense | null;
@@ -49,6 +58,7 @@ type AddExpenseProps = {
 };
 
 export function AddExpenseScreen({
+  expenses,
   members,
   preferences,
   editingExpense,
@@ -77,6 +87,61 @@ export function AddExpenseScreen({
   const [scanning, setScanning] = useState(false);
   const [scanFeedback, setScanFeedback] = useState<{ message: string; isError: boolean } | null>(null);
   const [receiptItems, setReceiptItems] = useState<ReceiptDraftItem[] | null>(null);
+  const [manualSuggestionsOpen, setManualSuggestionsOpen] = useState(false);
+  const [activeReceiptItemId, setActiveReceiptItemId] = useState<string | null>(null);
+  const blurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const productSuggestions = useMemo(
+    () => buildProductSuggestions(expenses),
+    [expenses]
+  );
+
+  const manualMatches = useMemo(
+    () =>
+      manualSuggestionsOpen
+        ? filterProductSuggestions(productSuggestions, title)
+        : [],
+    [manualSuggestionsOpen, productSuggestions, title]
+  );
+
+  useEffect(() => {
+    return () => {
+      if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
+    };
+  }, []);
+
+  const cancelPendingBlur = () => {
+    if (blurTimeoutRef.current) {
+      clearTimeout(blurTimeoutRef.current);
+      blurTimeoutRef.current = null;
+    }
+  };
+
+  const scheduleCloseSuggestions = (closer: () => void) => {
+    cancelPendingBlur();
+    blurTimeoutRef.current = setTimeout(closer, 160);
+  };
+
+  const applyManualProductSuggestion = (suggestion: ProductSuggestion) => {
+    cancelPendingBlur();
+    setTitle(suggestion.title);
+    setCategory(suggestion.category);
+    setSubcategory(suggestion.subcategory);
+    setUnit(suggestion.unit);
+    setManualSuggestionsOpen(false);
+  };
+
+  const applyReceiptProductSuggestion = (itemId: string, suggestion: ProductSuggestion) => {
+    cancelPendingBlur();
+    updateReceiptItem(itemId, (row) => ({
+      ...row,
+      title: suggestion.title,
+      category: suggestion.category,
+      subcategory: suggestion.subcategory,
+      unit: suggestion.unit,
+    }));
+    setActiveReceiptItemId(null);
+  };
 
   useEffect(() => {
     if (editingExpense) {
@@ -196,23 +261,23 @@ export function AddExpenseScreen({
 
     const expenses = receiptItems
       ? receiptItems.map((item) => ({
-          title: item.title.trim(),
-          amount: Number(item.amount.replace(/,/g, '')),
-          quantity: Number(item.quantityText),
-          unit: item.unit.trim(),
-          category: item.category,
-          subcategory: item.subcategory,
-        }))
+        title: item.title.trim(),
+        amount: Number(item.amount.replace(/,/g, '')),
+        quantity: Number(item.quantityText),
+        unit: item.unit.trim(),
+        category: item.category,
+        subcategory: item.subcategory,
+      }))
       : [
-          {
-            title: title.trim(),
-            amount: Number(amount.replace(/,/g, '')),
-            quantity: Number(quantity),
-            unit: unit.trim(),
-            category,
-            subcategory,
-          },
-        ];
+        {
+          title: title.trim(),
+          amount: Number(amount.replace(/,/g, '')),
+          quantity: Number(quantity),
+          unit: unit.trim(),
+          category,
+          subcategory,
+        },
+      ];
 
     if (expenses.some((expense) => !expense.title)) {
       Alert.alert('Add a description', 'Enter a description for each bill item.');
@@ -362,119 +427,145 @@ export function AddExpenseScreen({
               </Pressable>
             </View>
 
-            {receiptItems.map((item, index) => (
-              <View key={item.id} style={styles.receiptItemCard}>
-                <View style={styles.receiptItemTop}>
-                  <TextInput
-                    style={[styles.input, styles.receiptItemTitle]}
-                    value={item.title}
-                    onChangeText={(value) =>
-                      updateReceiptItem(item.id, (row) => ({ ...row, title: value }))
-                    }
-                    placeholder="Item description"
-                    placeholderTextColor={colors.placeholder}
-                    maxLength={160}
-                    accessibilityLabel={`Bill item ${index + 1} description`}
-                  />
-                  <Pressable
-                    style={styles.removeItemButton}
-                    onPress={() => removeReceiptItem(item.id)}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Remove bill item ${index + 1}`}
-                  >
-                    <AppIcon name="trash" color={colors.danger} size={15} />
-                  </Pressable>
-                </View>
+              {
+                receiptItems.map((item, index) => {
+                  const itemMatches =
+                    activeReceiptItemId === item.id
+                      ? filterProductSuggestions(productSuggestions, item.title)
+                      : [];
+                  return (
+                    <View key={item.id} style={styles.receiptItemCard}>
+                      <View style={styles.receiptItemTop}>
+                        <TextInput
+                          style={[styles.input, styles.receiptItemTitle]}
+                          value={item.title}
+                    onFocus={() => {
+                            cancelPendingBlur();
+                            setActiveReceiptItemId(item.id);
+                          }}
+                          onBlur={() =>
+                            scheduleCloseSuggestions(() =>
+                              setActiveReceiptItemId((current) => (current === item.id ? null : current))
+                            )
+                          }
+                          onChangeText={(value) => {
+                            cancelPendingBlur();
+                            setActiveReceiptItemId(item.id);
+                            updateReceiptItem(item.id, (row) => ({ ...row, title: value }));
+                          }}
+                          placeholder="Item description"
+                          placeholderTextColor={colors.placeholder}
+                          maxLength={160}
+                          accessibilityLabel={`Bill item ${index + 1} description`}
+                        />
+                        <Pressable
+                          style={styles.removeItemButton}
+                          onPress={() => removeReceiptItem(item.id)}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Remove bill item ${index + 1}`}
+                        >
+                          <AppIcon name="trash" color={colors.danger} size={15} />
+                        </Pressable>
+                      </View>
 
-                <View style={styles.receiptItemRow}>
-                  <TextInput
-                    style={[styles.input, styles.receiptItemQuantity]}
-                    value={item.quantityText}
-                    onChangeText={(value) =>
-                      updateReceiptItem(item.id, (row) => ({
-                        ...row,
-                        quantityText: sanitizeQuantityInput(value),
-                      }))
-                    }
-                    placeholder="Qty"
-                    placeholderTextColor={colors.placeholder}
-                    keyboardType="decimal-pad"
-                    inputMode="decimal"
-                    accessibilityLabel={`Bill item ${index + 1} quantity`}
-                  />
-                  <View style={styles.receiptItemUnit}>
-                    <Dropdown
-                      label=""
-                      inline
-                      modalTitle={`Bill item ${index + 1} unit`}
-                      value={item.unit}
-                      options={buildUnitOptions(item.unit)}
-                      onChange={(value) =>
-                        updateReceiptItem(item.id, (row) => ({ ...row, unit: value }))
-                      }
-                      placeholder="Unit"
-                    />
-                  </View>
-                  <TextInput
-                    style={[styles.input, styles.receiptItemAmount]}
-                    value={item.amount}
-                    onChangeText={(value) =>
-                      updateReceiptItem(item.id, (row) => ({ ...row, amount: value }))
-                    }
-                    placeholder="0.00"
-                    placeholderTextColor={colors.placeholder}
-                    keyboardType="decimal-pad"
-                    accessibilityLabel={`Bill item ${index + 1} amount`}
-                  />
-                </View>
+                      <ProductSuggestionsList
+                        suggestions={itemMatches}
+                        onSelect={(suggestion) => applyReceiptProductSuggestion(item.id, suggestion)}
+                        categoryColors={categoryColors}
+                        colors={colors}
+                        styles={styles}
+                      />
 
-                <View style={styles.receiptItemCategoryRow}>
-                  <View style={styles.flex}>
-                    <Dropdown
-                      label=""
-                      compact
-                      modalTitle="Category"
-                      value={item.category}
-                      options={CATEGORIES.map((value) => ({
-                        label: value,
-                        value,
-                        icon: getCategoryIcon(value),
-                        iconColor: categoryColors[value]?.fg,
-                        iconBg: categoryColors[value]?.bg,
-                      }))}
-                      onChange={(nextCategory) =>
-                        updateReceiptItem(item.id, (row) => ({
-                          ...row,
-                          category: nextCategory,
-                          subcategory: SUBCATEGORIES[nextCategory][0],
-                        }))
-                      }
-                    />
-                  </View>
-                  <View style={styles.flex}>
-                    <Dropdown
-                      label=""
-                      compact
-                      modalTitle="Subcategory"
-                      value={item.subcategory}
-                      options={SUBCATEGORIES[item.category].map((value) => ({
-                        label: value,
-                        value,
-                        icon: getSubcategoryIcon(value, item.category),
-                        iconColor: categoryColors[item.category]?.fg,
-                        iconBg: categoryColors[item.category]?.bg,
-                      }))}
-                      onChange={(nextSubcategory) =>
-                        updateReceiptItem(item.id, (row) => ({
-                          ...row,
-                          subcategory: nextSubcategory,
-                        }))
-                      }
-                    />
-                  </View>
-                </View>
-              </View>
-            ))}
+                      <View style={styles.receiptItemRow}>
+                        <TextInput
+                          style={[styles.input, styles.receiptItemQuantity]}
+                          value={item.quantityText}
+                          onChangeText={(value) =>
+                            updateReceiptItem(item.id, (row) => ({
+                              ...row,
+                              quantityText: sanitizeQuantityInput(value),
+                            }))
+                          }
+                          placeholder="Qty"
+                          placeholderTextColor={colors.placeholder}
+                          keyboardType="decimal-pad"
+                          inputMode="decimal"
+                          accessibilityLabel={`Bill item ${index + 1} quantity`}
+                        />
+                        <View style={styles.receiptItemUnit}>
+                          <Dropdown
+                            label=""
+                            inline
+                            modalTitle={`Bill item ${index + 1} unit`}
+                            value={item.unit}
+                            options={buildUnitOptions(item.unit)}
+                            onChange={(value) =>
+                              updateReceiptItem(item.id, (row) => ({ ...row, unit: value }))
+                            }
+                            placeholder="Unit"
+                          />
+                        </View>
+                        <TextInput
+                          style={[styles.input, styles.receiptItemAmount]}
+                          value={item.amount}
+                          onChangeText={(value) =>
+                            updateReceiptItem(item.id, (row) => ({ ...row, amount: value }))
+                          }
+                          placeholder="0.00"
+                          placeholderTextColor={colors.placeholder}
+                          keyboardType="decimal-pad"
+                          accessibilityLabel={`Bill item ${index + 1} amount`}
+                        />
+                      </View>
+
+                      <View style={styles.receiptItemCategoryRow}>
+                        <View style={styles.flex}>
+                          <Dropdown
+                            label=""
+                            compact
+                            modalTitle="Category"
+                            value={item.category}
+                            options={CATEGORIES.map((value) => ({
+                              label: value,
+                              value,
+                              icon: getCategoryIcon(value),
+                              iconColor: categoryColors[value]?.fg,
+                              iconBg: categoryColors[value]?.bg,
+                            }))}
+                            onChange={(nextCategory) =>
+                              updateReceiptItem(item.id, (row) => ({
+                                ...row,
+                                category: nextCategory,
+                                subcategory: SUBCATEGORIES[nextCategory][0],
+                              }))
+                            }
+                          />
+                        </View>
+                        <View style={styles.flex}>
+                          <Dropdown
+                            label=""
+                            compact
+                            modalTitle="Subcategory"
+                            value={item.subcategory}
+                            options={SUBCATEGORIES[item.category].map((value) => ({
+                              label: value,
+                              value,
+                              icon: getSubcategoryIcon(value, item.category),
+                              iconColor: categoryColors[item.category]?.fg,
+                              iconBg: categoryColors[item.category]?.bg,
+                            }))}
+                            onChange={(nextSubcategory) =>
+                              updateReceiptItem(item.id, (row) => ({
+                                ...row,
+                                subcategory: nextSubcategory,
+                              }))
+                            }
+                          />
+                        </View>
+                      </View>
+                    </View>
+            );
+            })}
           </View>
         ) : (
           <>
@@ -482,11 +573,27 @@ export function AddExpenseScreen({
             <TextInput
               style={styles.input}
               value={title}
-              onChangeText={setTitle}
+              onFocus={() => {
+                cancelPendingBlur();
+                setManualSuggestionsOpen(true);
+              }}
+              onBlur={() => scheduleCloseSuggestions(() => setManualSuggestionsOpen(false))}
+              onChangeText={(value) => {
+                cancelPendingBlur();
+                setTitle(value);
+                setManualSuggestionsOpen(true);
+              }}
               placeholder="e.g. Weekly groceries or milk"
               placeholderTextColor={colors.placeholder}
               maxLength={160}
               returnKeyType="next"
+            />
+            <ProductSuggestionsList
+              suggestions={manualMatches}
+              onSelect={applyManualProductSuggestion}
+              categoryColors={categoryColors}
+              colors={colors}
+              styles={styles}
             />
 
             <Text style={styles.inputLabel}>Amount ({preferences.currency})</Text>
@@ -596,6 +703,62 @@ export function AddExpenseScreen({
   );
 }
 
+function ProductSuggestionsList({
+  suggestions,
+  onSelect,
+  categoryColors,
+  colors,
+  styles,
+}: {
+  suggestions: ProductSuggestion[];
+  onSelect: (suggestion: ProductSuggestion) => void;
+  categoryColors: Record<ExpenseCategory, { bg: string; fg: string }>;
+  colors: ThemeColors;
+  styles: ReturnType<typeof createStyles>;
+}) {
+  if (suggestions.length === 0) return null;
+  return (
+    <View style={styles.suggestionsList}>
+      {suggestions.map((suggestion, index) => (
+        <Pressable
+          key={suggestion.title}
+          style={[
+            styles.suggestionRow,
+            index === suggestions.length - 1 && styles.suggestionRowLast,
+          ]}
+          onPress={() => onSelect(suggestion)}
+          accessibilityRole="button"
+        >
+          <View
+            style={[
+              styles.suggestionIconBadge,
+              {
+                backgroundColor:
+                  categoryColors[suggestion.category]?.bg ?? colors.primaryLight,
+              },
+            ]}
+          >
+            <AppIcon
+              name={getCategoryIcon(suggestion.category)}
+              color={categoryColors[suggestion.category]?.fg ?? colors.primary}
+              size={14}
+            />
+          </View>
+          <View style={styles.flex}>
+            <Text style={styles.suggestionTitle} numberOfLines={1}>
+              {suggestion.title}
+            </Text>
+            <Text style={styles.suggestionMeta} numberOfLines={1}>
+              {suggestion.category} · {suggestion.subcategory} · {suggestion.unit}
+            </Text>
+          </View>
+          <Text style={styles.suggestionCount}>{suggestion.count}×</Text>
+        </Pressable>
+      ))}
+    </View>
+  );
+}
+
 const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     flex: { flex: 1 },
@@ -689,4 +852,50 @@ const createStyles = (colors: ThemeColors) =>
     disabledButton: { opacity: 0.6 },
     cancelAction: { minHeight: 46, justifyContent: 'center', alignItems: 'center', marginTop: 4 },
     cancelActionText: { color: colors.muted, fontWeight: '700', fontSize: 13 },
+    suggestionsList: {
+      marginTop: 6,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.primaryBorder,
+      borderRadius: 14,
+      overflow: 'hidden',
+    },
+    suggestionRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    suggestionRowLast: {
+      borderBottomWidth: 0,
+    },
+    suggestionIconBadge: {
+      width: 28,
+      height: 28,
+      borderRadius: 9,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    suggestionTitle: {
+      color: colors.ink,
+      fontSize: 13,
+      fontWeight: '700',
+    },
+    suggestionMeta: {
+      color: colors.muted,
+      fontSize: 11,
+      marginTop: 1,
+    },
+    suggestionCount: {
+      color: colors.primary,
+      fontSize: 11,
+      fontWeight: '800',
+      backgroundColor: colors.primaryLight,
+      paddingHorizontal: 7,
+      paddingVertical: 3,
+      borderRadius: 8,
+    },
   });

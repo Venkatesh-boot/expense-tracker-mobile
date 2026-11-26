@@ -82,6 +82,83 @@ export function buildUnitOptions(
   return options;
 }
 
+export type ProductSuggestion = {
+  title: string;
+  category: ExpenseCategory;
+  subcategory: string;
+  unit: string;
+  count: number;
+  lastDate: string;
+  lastCreatedAt: string;
+};
+
+/** Builds deduplicated product autocomplete suggestions ordered by frequency and recency. */
+export function buildProductSuggestions(expenses: Expense[]): ProductSuggestion[] {
+  const byTitle = new Map<string, ProductSuggestion>();
+
+  for (const expense of expenses) {
+    const trimmed = expense.title.trim();
+    if (!trimmed) continue;
+    const key = trimmed.toLowerCase();
+    const existing = byTitle.get(key);
+    if (!existing) {
+      byTitle.set(key, {
+        title: trimmed,
+        category: expense.category,
+        subcategory: expense.subcategory,
+        unit: expense.unit,
+        count: 1,
+        lastDate: expense.date,
+        lastCreatedAt: expense.createdAt,
+      });
+      continue;
+    }
+
+    existing.count += 1;
+    const isNewer =
+      expense.date > existing.lastDate ||
+      (expense.date === existing.lastDate && expense.createdAt > existing.lastCreatedAt);
+    if (isNewer) {
+      existing.title = trimmed;
+      existing.category = expense.category;
+      existing.subcategory = expense.subcategory;
+      existing.unit = expense.unit;
+      existing.lastDate = expense.date;
+      existing.lastCreatedAt = expense.createdAt;
+    }
+  }
+
+  return [...byTitle.values()].sort((a, b) => {
+    if (b.count !== a.count) return b.count - a.count;
+    if (b.lastDate !== a.lastDate) return b.lastDate.localeCompare(a.lastDate);
+    return b.lastCreatedAt.localeCompare(a.lastCreatedAt);
+  });
+}
+
+/** Filters product suggestions, ranking prefix matches before substring matches. */
+export function filterProductSuggestions(
+  suggestions: ProductSuggestion[],
+  query: string,
+  limit = 6
+): ProductSuggestion[] {
+  const normalized = query.trim().toLowerCase();
+  if (!normalized) return suggestions.slice(0, limit);
+
+  const prefixMatches: ProductSuggestion[] = [];
+  const substringMatches: ProductSuggestion[] = [];
+
+  for (const item of suggestions) {
+    const lower = item.title.toLowerCase();
+    if (lower.startsWith(normalized)) {
+      prefixMatches.push(item);
+    } else if (lower.includes(normalized)) {
+      substringMatches.push(item);
+    }
+  }
+
+  return [...prefixMatches, ...substringMatches].slice(0, limit);
+}
+
 export type CurrencyCode = 'INR' | 'USD' | 'EUR' | 'GBP';
 export type ThemeMode = 'light' | 'dark';
 export type ThemePreference = 'auto' | ThemeMode;

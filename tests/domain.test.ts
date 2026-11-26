@@ -1,8 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  buildProductSuggestions,
   buildUnitOptions,
   displayDate,
+  filterProductSuggestions,
   formatMoney,
   getCurrencyLocale,
   getNextThemeChangeDelayMs,
@@ -10,6 +12,7 @@ import {
   sanitizeQuantityInput,
   todayString,
 } from '../src/domain';
+import type { Expense } from '../src/domain';
 
 test('formatMoney formats each currency with its appropriate locale grouping', () => {
   assert.equal(formatMoney(100000, 'INR'), '₹1,00,000.00');
@@ -71,4 +74,60 @@ test('getNextThemeChangeDelayMs targets the upcoming 6 AM or 6 PM boundary', () 
 
   const night = new Date(2026, 10, 26, 23, 0, 0, 0);
   assert.equal(getNextThemeChangeDelayMs(night), 7 * 60 * 60 * 1000 + 500);
+});
+
+test('buildProductSuggestions deduplicates by title and preserves latest metadata ordered by frequency', () => {
+  const sample: Expense[] = [
+    {
+      id: '1',
+      title: 'milk',
+      amount: 60,
+      quantity: 1,
+      unit: 'L',
+      category: 'Groceries',
+      subcategory: 'Pantry',
+      date: '2026-11-10',
+      paidBy: 'm1',
+      notes: '',
+      createdAt: '2026-11-10T08:00:00Z',
+    },
+    {
+      id: '2',
+      title: 'Organic Milk',
+      amount: 75,
+      quantity: 1,
+      unit: 'L',
+      category: 'Groceries',
+      subcategory: 'Dairy & bakery',
+      date: '2026-11-12',
+      paidBy: 'm1',
+      notes: '',
+      createdAt: '2026-11-12T08:00:00Z',
+    },
+    {
+      id: '3',
+      title: 'Milk',
+      amount: 65,
+      quantity: 1,
+      unit: 'L',
+      category: 'Groceries',
+      subcategory: 'Dairy & bakery',
+      date: '2026-11-20',
+      paidBy: 'm1',
+      notes: '',
+      createdAt: '2026-11-20T08:00:00Z',
+    },
+  ];
+
+  const suggestions = buildProductSuggestions(sample);
+  assert.equal(suggestions.length, 2);
+  assert.equal(suggestions[0].title, 'Milk');
+  assert.equal(suggestions[0].count, 2);
+  assert.equal(suggestions[0].subcategory, 'Dairy & bakery');
+
+  const filtered = filterProductSuggestions(suggestions, 'milk');
+  assert.deepEqual(
+    filtered.map((item) => item.title),
+    ['Milk', 'Organic Milk']
+  );
 });

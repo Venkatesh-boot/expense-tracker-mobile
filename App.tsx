@@ -378,6 +378,7 @@ function AppShell({
                   {screen === 'add' && (
                     <AddExpenseScreen
                       key={editingExpense?.id ?? 'new'}
+                      expenses={expenses}
                       members={members}
                       preferences={preferences}
                       editingExpense={editingExpense}
