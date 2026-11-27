@@ -9,3 +9,5 @@ ios
 *.keystore
 *.mobileprovision
 *.orig.*
+android/keystore.properties
+store-assets/

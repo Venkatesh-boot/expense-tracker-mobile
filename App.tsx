@@ -309,7 +309,7 @@ function AppShell({
               <StatusBar style={isDark ? 'light' : 'dark'} />
               <View style={styles.loadingContent}>
                 <View style={styles.logoMark}><Text style={styles.logoText}>F</Text></View>
-                <Text style={styles.loadingTitle}>Family expenses</Text>
+                <Text style={styles.loadingTitle}>Family Expense Tracker</Text>
                 {loadError ? (
                   <>
                     <Text style={styles.loadError}>{loadError}</Text>
@@ -343,7 +343,7 @@ function AppShell({
                   </Pressable>
                   <View style={styles.logoMarkSmall}><Text style={styles.logoTextSmall}>F</Text></View>
                   <View style={styles.flex}>
-                    <Text style={styles.brandTitle}>Family expenses</Text>
+                    <Text style={styles.brandTitle}>Family Expense Tracker</Text>
                     <Text style={styles.brandSubtitle}>A private household ledger</Text>
                   </View>
                   <Pressable
@@ -474,7 +474,7 @@ function AppShell({
                       <View style={styles.drawerHeader}>
                         <View style={styles.logoMarkSmall}><Text style={styles.logoTextSmall}>F</Text></View>
                         <View style={styles.flex}>
-                          <Text style={styles.brandTitle}>Family expenses</Text>
+                          <Text style={styles.brandTitle}>Family Expense Tracker</Text>
                           <Text style={styles.brandSubtitle}>{preferences.displayName}'s household</Text>
                         </View>
                         <Pressable

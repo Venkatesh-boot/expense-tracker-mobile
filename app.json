@@ -1,24 +1,23 @@
 {
   "expo": {
-    "name": "Family Expenses",
-    "slug": "family-expenses",
-    "scheme": "familyexpenses",
-    "version": "1.0.0",
+    "name": "Family Expense Tracker",
+    "slug": "family-expense-tracker",
+    "scheme": "familytracker",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "ios": {
-      "bundleIdentifier": "com.venkatesh.familyexpenses",
+      "bundleIdentifier": "com.oneeye.familytracker",
       "supportsTablet": true
     },
     "android": {
-      "package": "com.venkatesh.familyexpenses",
+      "package": "com.oneeye.familytracker",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#102A71",
         "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "backgroundImage": "./assets/android-icon-background.png"
       },
       "predictiveBackGestureEnabled": true
     },
@@ -30,8 +29,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow Family Expenses to choose a receipt image for on-device scanning.",
-          "cameraPermission": "Allow Family Expenses to take a receipt photo for on-device scanning.",
+          "photosPermission": "Allow Family Expense Tracker to choose a receipt image for on-device scanning.",
+          "cameraPermission": "Allow Family Expense Tracker to take a receipt photo for on-device scanning.",
           "microphonePermission": false
         }
       ],

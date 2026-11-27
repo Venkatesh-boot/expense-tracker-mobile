@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -45,6 +46,7 @@ export function SettingsScreen({
   );
   const [saving, setSaving] = useState(false);
   const [transferring, setTransferring] = useState(false);
+  const [privacyOpen, setPrivacyOpen] = useState(false);
 
   useEffect(() => {
     setDisplayName(preferences.displayName);
@@ -196,10 +198,38 @@ export function SettingsScreen({
       <View style={styles.privacyPanel}>
         <Text style={styles.privacyPanelTitle}>Privacy first</Text>
         <Text style={styles.privacyPanelText}>
-          Expense details and scanned receipt text stay on this device. Receipt images are not attached to entries or uploaded.
+          Expense details and scanned receipt text stay on this device. Receipt images are not attached to entries or uploaded. No ads, analytics, or SMS/banking access.
         </Text>
+        <Pressable style={styles.privacyLinkButton} onPress={() => setPrivacyOpen(true)}>
+          <Text style={styles.privacyLinkText}>View Privacy Policy</Text>
+        </Pressable>
       </View>
       </ScrollView>
+
+      <Modal
+        transparent
+        visible={privacyOpen}
+        animationType="fade"
+        onRequestClose={() => setPrivacyOpen(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setPrivacyOpen(false)} />
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Privacy Policy — Family Expense Tracker</Text>
+            <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
+              <Text style={styles.modalBody}>
+                • Local Storage Only: Your expenses, family names, budgets, and settings are stored only on your device in a private SQLite database.{'\n\n'}
+                • Receipt Scanning: Camera and photo access is used only when you choose to scan a receipt. OCR runs completely on-device via Google ML Kit; images are never uploaded or saved inside entries.{'\n\n'}
+                • Google Drive Sync: Only accesses the specific sync file you select using Android's system file picker inside your own Google Drive.{'\n\n'}
+                • No SMS / No Banking / No Ads: The app never reads text messages, never connects to bank accounts, and collects zero personal data.
+              </Text>
+            </ScrollView>
+            <Pressable style={styles.primaryButton} onPress={() => setPrivacyOpen(false)}>
+              <Text style={styles.primaryButtonText}>Close</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
 
       <View style={styles.floatingFooter}>
         <Pressable
@@ -266,4 +296,11 @@ const createStyles = (colors: ThemeColors) =>
     privacyPanel: { padding: 16, borderRadius: 18, backgroundColor: colors.primaryLight, marginTop: 16, borderWidth: 1, borderColor: colors.primaryBorder },
     privacyPanelTitle: { color: colors.primary, fontWeight: '800', fontSize: 14, marginBottom: 6 },
     privacyPanelText: { color: colors.muted, fontSize: 12, lineHeight: 18 },
+    privacyLinkButton: { marginTop: 12, alignSelf: 'flex-start', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 10, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.primaryBorder },
+    privacyLinkText: { color: colors.primary, fontWeight: '800', fontSize: 12 },
+    modalBackdrop: { flex: 1, backgroundColor: colors.backdrop, justifyContent: 'center', padding: 20 },
+    modalCard: { backgroundColor: colors.surface, borderRadius: 20, padding: 18, borderWidth: 1, borderColor: colors.border, maxHeight: '80%', gap: 12 },
+    modalTitle: { color: colors.ink, fontSize: 17, fontWeight: '800' },
+    modalScroll: { maxHeight: 300 },
+    modalBody: { color: colors.muted, fontSize: 13, lineHeight: 20 },
   });
