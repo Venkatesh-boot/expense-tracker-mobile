@@ -1,6 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildChart, getBounds } from '../src/reportUtils';
+import {
+  buildChart,
+  buildReportMetrics,
+  getBounds,
+  groupExpensesByDay,
+} from '../src/reportUtils';
 import type { Expense } from '../src/domain';
 
 function makeExpense(id: string, date: string, amount: number, paidBy = 'm1'): Expense {
@@ -49,4 +54,41 @@ test('buildChart aggregates by member using memberNames lookup', () => {
     { label: 'Sam', amount: 90 },
     { label: 'Alex', amount: 50 },
   ]);
+});
+
+test('groupExpensesByDay groups and sorts expenses newest day first with today/yesterday flags', () => {
+  const now = new Date(2026, 10, 27, 13, 0, 0);
+  const expenses: Expense[] = [
+    makeExpense('1', '2026-11-25', 200, 'm1'),
+    makeExpense('2', '2026-11-27', 150, 'm1'),
+    makeExpense('3', '2026-11-27', 50, 'm2'),
+    makeExpense('4', '2026-11-26', 100, 'm2'),
+  ];
+
+  const groups = groupExpensesByDay(expenses, now);
+  assert.equal(groups.length, 3);
+  assert.equal(groups[0].date, '2026-11-27');
+  assert.equal(groups[0].isToday, true);
+  assert.equal(groups[0].total, 200);
+  assert.equal(groups[0].count, 2);
+  assert.equal(groups[0].percentOfTotal, 40);
+
+  assert.equal(groups[1].date, '2026-11-26');
+  assert.equal(groups[1].isYesterday, true);
+  assert.equal(groups[1].total, 100);
+
+  assert.equal(groups[2].date, '2026-11-25');
+  assert.equal(groups[2].isToday, false);
+  assert.equal(groups[2].isYesterday, false);
+
+  const memberNames = new Map([
+    ['m1', 'Alex'],
+    ['m2', 'Sam'],
+  ]);
+  const metrics = buildReportMetrics(expenses, groups, memberNames);
+  assert.equal(metrics.total, 500);
+  assert.equal(metrics.activeDays, 3);
+  assert.equal(Math.round(metrics.averagePerDay), 167);
+  assert.equal(metrics.peakDay?.total, 200);
+  assert.equal(metrics.topMember?.name, 'Alex');
 });

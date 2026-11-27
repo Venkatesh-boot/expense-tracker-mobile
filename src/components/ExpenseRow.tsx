@@ -13,13 +13,15 @@ export function ExpenseRow({
   currency,
   onPress,
   onDelete,
+  hideDate = false,
   last,
 }: {
   expense: Expense;
   memberName: string;
   currency: CurrencyCode;
   onPress?: (expense: Expense) => void;
-  onDelete: (expense: Expense) => void;
+  onDelete?: (expense: Expense) => void;
+  hideDate?: boolean;
   last: boolean;
 }) {
   const { colors, categoryColors } = useTheme();
@@ -51,7 +53,8 @@ export function ExpenseRow({
               size={11}
             />
             <Text style={styles.expenseMeta} numberOfLines={1}>
-              {expense.quantity} {expense.unit} · {expense.category} · {expense.subcategory} · {memberName} · {displayDate(expense.date)}
+              {expense.quantity} {expense.unit} · {expense.category} · {expense.subcategory} · {memberName}
+              {hideDate ? '' : ` · ${displayDate(expense.date)}`}
             </Text>
           </View>
           {hasNotes ? (
@@ -63,14 +66,16 @@ export function ExpenseRow({
       </Pressable>
       <View style={styles.expenseAmountWrap}>
         <Text style={styles.expenseAmount}>{formatMoney(expense.amount, currency)}</Text>
-        <Pressable
-          onPress={() => onDelete(expense)}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel={`Delete ${expense.title}`}
-        >
-          <Text style={styles.deleteText}>Delete</Text>
-        </Pressable>
+        {onDelete ? (
+          <Pressable
+            onPress={() => onDelete(expense)}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={`Delete ${expense.title}`}
+          >
+            <Text style={styles.deleteText}>Delete</Text>
+          </Pressable>
+        ) : null}
       </View>
     </View>
   );

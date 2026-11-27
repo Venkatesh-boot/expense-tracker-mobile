@@ -328,6 +328,109 @@ export function DashboardScreen({
         ))}
       </View>
 
+      <View style={styles.todayWidget} accessibilityLabel="Today spending widget">
+        <View style={styles.todayHeader}>
+          <View style={styles.flex}>
+            <Text style={styles.todayEyebrow}>TODAY'S SPEND · {displayDate(summary.todayKey).toUpperCase()}</Text>
+            <View style={styles.todayAmountRow}>
+              <Text style={styles.todayAmount}>{formatMoney(summary.todayTotal, currency)}</Text>
+              <View style={styles.todayCountPill}>
+                <Text style={styles.todayCountText}>
+                  {summary.todayCount === 0
+                    ? 'No spend yet'
+                    : `${summary.todayCount} ${summary.todayCount === 1 ? 'entry' : 'entries'}`}
+                </Text>
+              </View>
+            </View>
+          </View>
+          <Pressable
+            style={styles.todayActionButton}
+            onPress={onAddExpense}
+            accessibilityRole="button"
+            accessibilityLabel="Add today expense"
+          >
+            <Text style={styles.todayActionText}>+ Log today</Text>
+          </Pressable>
+        </View>
+
+        <View style={styles.todayMetaRow}>
+          {summary.budget && summary.budget.safeDailyPace > 0 ? (
+            <View
+              style={[
+                styles.todayStatusPill,
+                summary.todayTotal <= summary.budget.safeDailyPace
+                  ? styles.todayStatusGood
+                  : styles.todayStatusWarn,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.todayStatusText,
+                  summary.todayTotal <= summary.budget.safeDailyPace
+                    ? styles.todayStatusTextGood
+                    : styles.todayStatusTextWarn,
+                ]}
+              >
+                {summary.todayTotal <= summary.budget.safeDailyPace
+                  ? `Within ${formatMoney(summary.budget.safeDailyPace, currency)}/day pace`
+                  : `${formatMoney(summary.todayTotal - summary.budget.safeDailyPace, currency)} above daily pace`}
+              </Text>
+            </View>
+          ) : summary.yesterdayTotal > 0 ? (
+            <View style={styles.todayStatusPillNeutral}>
+              <Text style={styles.todayStatusTextNeutral}>
+                Yesterday: {formatMoney(summary.yesterdayTotal, currency)}
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.todayStatusPillNeutral}>
+              <Text style={styles.todayStatusTextNeutral}>
+                Month daily avg: {formatMoney(summary.dailyAverage, currency)}
+              </Text>
+            </View>
+          )}
+          {summary.todayTopCategory ? (
+            <View style={styles.todayStatusPillNeutral}>
+              <Text style={styles.todayStatusTextNeutral}>
+                Top: {summary.todayTopCategory.category} ({summary.todayTopCategory.percent}%)
+              </Text>
+            </View>
+          ) : null}
+        </View>
+
+        {summary.todayExpenses.length > 0 ? (
+          <View style={styles.todayItemsList}>
+            {summary.todayExpenses.slice(0, 3).map((expense, index, list) => (
+              <ExpenseRow
+                key={expense.id}
+                expense={expense}
+                memberName={memberNames.get(expense.paidBy) || 'Family'}
+                currency={currency}
+                onPress={onSelectExpense}
+                onDelete={onDeleteExpense}
+                hideDate
+                last={index === list.length - 1 && summary.todayExpenses.length <= 3}
+              />
+            ))}
+            {summary.todayExpenses.length > 3 ? (
+              <Pressable
+                style={styles.todayMoreButton}
+                onPress={onShowExpenses}
+                accessibilityRole="button"
+              >
+                <Text style={styles.todayMoreText}>
+                  View all {summary.todayCount} entries today →
+                </Text>
+              </Pressable>
+            ) : null}
+          </View>
+        ) : (
+          <Text style={styles.todayEmptyText}>
+            Nothing recorded for today yet. Tap "+ Log today" to add an expense.
+          </Text>
+        )}
+      </View>
+
       <View style={styles.kpiGrid}>
         <View style={styles.kpiCard}>
           <View style={styles.kpiHeader}>
@@ -1216,6 +1319,110 @@ const createStyles = (colors: ThemeColors) =>
     },
     quickActionLabel: { color: colors.ink, fontSize: 11, fontWeight: '700' },
     quickActionLabelPrimary: { color: colors.onPrimary, fontWeight: '800' },
+
+    todayWidget: {
+      marginTop: 14,
+      backgroundColor: colors.surface,
+      borderRadius: 18,
+      padding: 15,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    todayHeader: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      justifyContent: 'space-between',
+      gap: 10,
+    },
+    todayEyebrow: {
+      color: colors.muted,
+      fontSize: 10,
+      fontWeight: '800',
+      letterSpacing: 1,
+    },
+    todayAmountRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flexWrap: 'wrap',
+      gap: 8,
+      marginTop: 4,
+    },
+    todayAmount: {
+      color: colors.ink,
+      fontSize: 24,
+      fontWeight: '900',
+    },
+    todayCountPill: {
+      backgroundColor: colors.surfaceTint,
+      borderRadius: 9,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+    },
+    todayCountText: {
+      color: colors.primary,
+      fontSize: 10,
+      fontWeight: '700',
+    },
+    todayActionButton: {
+      backgroundColor: colors.primaryLight,
+      borderWidth: 1,
+      borderColor: colors.primaryBorder,
+      borderRadius: 11,
+      paddingHorizontal: 11,
+      paddingVertical: 7,
+    },
+    todayActionText: {
+      color: colors.primary,
+      fontSize: 11,
+      fontWeight: '800',
+    },
+    todayMetaRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 6,
+      marginTop: 10,
+    },
+    todayStatusPill: {
+      borderRadius: 9,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+    },
+    todayStatusGood: { backgroundColor: colors.successLight },
+    todayStatusWarn: { backgroundColor: colors.amberLight },
+    todayStatusText: { fontSize: 10, fontWeight: '700' },
+    todayStatusTextGood: { color: colors.success },
+    todayStatusTextWarn: { color: colors.amber },
+    todayStatusPillNeutral: {
+      backgroundColor: colors.surfaceTint,
+      borderRadius: 9,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+    },
+    todayStatusTextNeutral: {
+      color: colors.muted,
+      fontSize: 10,
+      fontWeight: '700',
+    },
+    todayItemsList: {
+      marginTop: 10,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    todayMoreButton: {
+      paddingTop: 10,
+      alignItems: 'center',
+    },
+    todayMoreText: {
+      color: colors.primary,
+      fontSize: 12,
+      fontWeight: '800',
+    },
+    todayEmptyText: {
+      color: colors.muted,
+      fontSize: 12,
+      marginTop: 10,
+      lineHeight: 17,
+    },
 
     kpiGrid: {
       flexDirection: 'row',

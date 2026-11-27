@@ -46,6 +46,11 @@ test('buildDashboardSummary computes totals, MoM pace, budget, and top purchases
   assert.equal(summary.monthTotal, 500);
   assert.equal(summary.monthCount, 3);
   assert.equal(summary.todayTotal, 150);
+  assert.equal(summary.todayCount, 1);
+  assert.equal(summary.todayExpenses.length, 1);
+  assert.equal(summary.todayExpenses[0].id, '1');
+  assert.equal(summary.todayTopCategory?.category, 'Groceries');
+  assert.equal(summary.yesterdayTotal, 300);
   assert.equal(summary.thisWeekTotal, 450); // Mon Nov 9 + Tue Nov 10
   assert.equal(summary.dailyAverage, 50);
   assert.equal(summary.projectedMonthTotal, 1500); // 50 * 30 days in Nov

@@ -86,6 +86,9 @@ export type DashboardSummary = {
   categoryCount: number;
   todayTotal: number;
   todayCount: number;
+  todayExpenses: Expense[];
+  todayTopCategory: DashboardCategoryItem | null;
+  yesterdayTotal: number;
   thisWeekTotal: number;
   thisWeekCount: number;
   dailyAverage: number;
@@ -150,11 +153,15 @@ export function buildDashboardSummary(
   const daysSinceMonday = (weekStartDate.getDay() + 6) % 7;
   weekStartDate.setDate(weekStartDate.getDate() - daysSinceMonday);
   const weekStartKey = todayString(weekStartDate);
+  const yesterdayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+  const yesterdayKey = todayString(yesterdayDate);
 
   const thisMonth: Expense[] = [];
   const prevMonth: Expense[] = [];
+  const todayExpenses: Expense[] = [];
   let todayTotal = 0;
   let todayCount = 0;
+  let yesterdayTotal = 0;
   let thisWeekTotal = 0;
   let thisWeekCount = 0;
 
@@ -165,14 +172,19 @@ export function buildDashboardSummary(
       prevMonth.push(expense);
     }
     if (expense.date === todayKey) {
+      todayExpenses.push(expense);
       todayTotal += expense.amount;
       todayCount += 1;
+    } else if (expense.date === yesterdayKey) {
+      yesterdayTotal += expense.amount;
     }
     if (expense.date >= weekStartKey && expense.date <= todayKey) {
       thisWeekTotal += expense.amount;
       thisWeekCount += 1;
     }
   }
+  todayExpenses.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const todayTopCategory = buildCategoryBreakdown(todayExpenses, todayTotal)[0] ?? null;
 
   const monthTotal = sumAmounts(thisMonth);
   const monthCount = thisMonth.length;
@@ -261,6 +273,9 @@ export function buildDashboardSummary(
     categoryCount: categoryTotals.length,
     todayTotal,
     todayCount,
+    todayExpenses,
+    todayTopCategory,
+    yesterdayTotal,
     thisWeekTotal,
     thisWeekCount,
     dailyAverage,

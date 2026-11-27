@@ -483,6 +483,8 @@ function AppShell({
                       expenses={expenses}
                       members={members}
                       currency={preferences.currency}
+                      onSelectExpense={setSelectedExpense}
+                      onDeleteExpense={confirmDeleteExpense}
                     />
                   )}
                   {screen === 'prices' && (

@@ -1,8 +1,31 @@
 import { displayDate, formatMonthLabel, todayString } from './domain';
-import type { Expense } from './domain';
+import type { Expense, ExpenseCategory } from './domain';
 
 export type ReportRange = 'day' | 'week' | 'month' | 'year' | 'custom';
 export type ChartDimension = 'trend' | 'category' | 'subcategory' | 'product' | 'member';
+
+export type ReportDayGroup = {
+  date: string;
+  label: string;
+  weekday: string;
+  isToday: boolean;
+  isYesterday: boolean;
+  total: number;
+  count: number;
+  percentOfTotal: number;
+  items: Expense[];
+};
+
+export type ReportMetrics = {
+  total: number;
+  count: number;
+  activeDays: number;
+  averagePerDay: number;
+  averagePerEntry: number;
+  peakDay: { date: string; label: string; total: number } | null;
+  topCategory: { category: ExpenseCategory; total: number; percent: number } | null;
+  topMember: { name: string; total: number; percent: number } | null;
+};
 
 export function getBounds(
   range: ReportRange,
@@ -104,4 +127,111 @@ function getWeekStartKey(dateString: string): string {
 
 function toDateKey(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function formatWeekday(dateString: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateString);
+  if (!match) return '';
+  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  return date.toLocaleDateString('en-GB', { weekday: 'short' });
+}
+
+/** Groups filtered expenses into newest-first day buckets with totals and shares. */
+export function groupExpensesByDay(
+  expenses: Expense[],
+  now = new Date()
+): ReportDayGroup[] {
+  const todayKey = todayString(now);
+  const yesterdayKey = toDateKey(
+    new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1)
+  );
+  const grandTotal = expenses.reduce((sum, item) => sum + item.amount, 0);
+
+  const byDate = new Map<string, Expense[]>();
+  for (const expense of expenses) {
+    const existing = byDate.get(expense.date);
+    if (existing) {
+      existing.push(expense);
+    } else {
+      byDate.set(expense.date, [expense]);
+    }
+  }
+
+  return [...byDate.entries()]
+    .sort(([a], [b]) => b.localeCompare(a))
+    .map(([date, dayItems]) => {
+      const sortedItems = [...dayItems].sort(
+        (a, b) =>
+          b.createdAt.localeCompare(a.createdAt) || b.amount - a.amount
+      );
+      const total = sortedItems.reduce((sum, item) => sum + item.amount, 0);
+      return {
+        date,
+        label: displayDate(date),
+        weekday: formatWeekday(date),
+        isToday: date === todayKey,
+        isYesterday: date === yesterdayKey,
+        total,
+        count: sortedItems.length,
+        percentOfTotal: grandTotal > 0 ? Math.round((total / grandTotal) * 100) : 0,
+        items: sortedItems,
+      };
+    });
+}
+
+/** Summarizes daywise spending metrics, peak day, and top contributors for a filtered report. */
+export function buildReportMetrics(
+  expenses: Expense[],
+  dayGroups: ReportDayGroup[],
+  memberNames?: Map<string, string>
+): ReportMetrics {
+  const total = expenses.reduce((sum, item) => sum + item.amount, 0);
+  const count = expenses.length;
+  const activeDays = dayGroups.length;
+  const averagePerDay = activeDays > 0 ? total / activeDays : 0;
+  const averagePerEntry = count > 0 ? total / count : 0;
+
+  let peakDay: ReportMetrics['peakDay'] = null;
+  for (const group of dayGroups) {
+    if (!peakDay || group.total > peakDay.total) {
+      peakDay = { date: group.date, label: group.label, total: group.total };
+    }
+  }
+
+  const categoryTotals = new Map<ExpenseCategory, number>();
+  const memberTotals = new Map<string, number>();
+  for (const expense of expenses) {
+    categoryTotals.set(
+      expense.category,
+      (categoryTotals.get(expense.category) || 0) + expense.amount
+    );
+    const memberLabel = memberNames?.get(expense.paidBy) || 'Family';
+    memberTotals.set(memberLabel, (memberTotals.get(memberLabel) || 0) + expense.amount);
+  }
+
+  const topCatEntry = [...categoryTotals.entries()].sort(([, a], [, b]) => b - a)[0];
+  const topMemberEntry = [...memberTotals.entries()].sort(([, a], [, b]) => b - a)[0];
+
+  return {
+    total,
+    count,
+    activeDays,
+    averagePerDay,
+    averagePerEntry,
+    peakDay,
+    topCategory: topCatEntry
+      ? {
+          category: topCatEntry[0],
+          total: topCatEntry[1],
+          percent: total > 0 ? Math.round((topCatEntry[1] / total) * 100) : 0,
+        }
+      : null,
+    topMember: topMemberEntry
+      ? {
+          name: topMemberEntry[0],
+          total: topMemberEntry[1],
+          percent: total > 0 ? Math.round((topMemberEntry[1] / total) * 100) : 0,
+        }
+      : null,
+  };
 }
