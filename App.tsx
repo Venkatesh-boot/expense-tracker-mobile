@@ -4,7 +4,9 @@ import {
   Alert,
   AppState,
   BackHandler,
+  Dimensions,
   Modal,
+  NativeModules,
   Platform,
   Pressable,
   SafeAreaView,
@@ -48,6 +50,7 @@ import { scanReceipt } from './src/receipt';
 import { exportBackup, exportCsv, importBackup } from './src/transfer';
 
 const ANDROID_TOP_INSET = Platform.OS === 'android' ? RNStatusBar.currentHeight ?? 0 : 0;
+const ANDROID_DEFAULT_BOTTOM_INSET = Platform.OS === 'android' ? 48 : 0;
 
 export default function App() {
   const [preferences, setPreferences] = useState<Preferences>({
@@ -115,6 +118,51 @@ function AppShell({
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [priceFocusTitle, setPriceFocusTitle] = useState<string | null>(null);
+  const [androidInsets, setAndroidInsets] = useState({
+    top: ANDROID_TOP_INSET,
+    bottom: ANDROID_DEFAULT_BOTTOM_INSET,
+  });
+
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const safSync = NativeModules.SafSync as
+      | { getSystemInsets?: () => Promise<{ top?: number; bottom?: number }> }
+      | undefined;
+    if (!safSync?.getSystemInsets) return;
+
+    let active = true;
+    const syncInsets = async () => {
+      try {
+        const result = await safSync.getSystemInsets!();
+        if (!active || !result) return;
+        setAndroidInsets({
+          top: typeof result.top === 'number' && result.top > 0 ? result.top : ANDROID_TOP_INSET,
+          bottom:
+            typeof result.bottom === 'number' && result.bottom >= 0
+              ? result.bottom
+              : ANDROID_DEFAULT_BOTTOM_INSET,
+        });
+      } catch {
+        // Keep safe defaults
+      }
+    };
+
+    void syncInsets();
+    const timer = setTimeout(() => void syncInsets(), 180);
+    const appStateSub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') void syncInsets();
+    });
+    const dimSub = Dimensions.addEventListener('change', () => {
+      void syncInsets();
+    });
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+      appStateSub.remove();
+      dimSub.remove();
+    };
+  }, []);
 
   const memberNames = useMemo(
     () => new Map(members.map((member) => [member.id, member.name])),
@@ -329,7 +377,14 @@ function AppShell({
   }
 
             return (
-            <SafeAreaView style={styles.safeArea}>
+            <SafeAreaView
+              style={[
+                styles.safeArea,
+                Platform.OS === 'android'
+                  ? { paddingTop: androidInsets.top, paddingBottom: androidInsets.bottom }
+                  : null,
+              ]}
+            >
               <StatusBar style={isDark ? 'light' : 'dark'} />
               <View style={styles.app}>
                 <View style={styles.header}>
@@ -470,7 +525,17 @@ function AppShell({
                 >
                   <View style={styles.drawerOverlay}>
                     <Pressable style={styles.drawerScrim} onPress={() => setMenuOpen(false)} />
-                    <View style={styles.drawer}>
+                    <View
+                      style={[
+                        styles.drawer,
+                        Platform.OS === 'android'
+                          ? {
+                              paddingTop: Math.max(16, androidInsets.top + 12),
+                              paddingBottom: Math.max(24, androidInsets.bottom + 14),
+                            }
+                          : null,
+                      ]}
+                    >
                       <View style={styles.drawerHeader}>
                         <View style={styles.logoMarkSmall}><Text style={styles.logoTextSmall}>F</Text></View>
                         <View style={styles.flex}>

@@ -2,7 +2,7 @@
 
 App Name: **Family Expense Tracker**  
 Package ID: `com.oneeye.familytracker`  
-Current Release Version: `versionCode 2` (`1.0.1`)  
+Current Release Version: `versionCode 3` (`1.0.2`)  
 Target SDK: `36` (Android 16) • Min SDK: `24` (Android 7.0)  
 
 ---
