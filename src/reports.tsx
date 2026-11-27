@@ -1,16 +1,18 @@
 import React, { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { CATEGORIES, displayDate, formatMoney, SUBCATEGORIES, todayString } from './models';
+import { CATEGORIES, CURRENCY_SYMBOLS, displayDate, formatMoney, SUBCATEGORIES, todayString } from './models';
 import type { CurrencyCode, Expense, ExpenseCategory, FamilyMember } from './models';
 import { DatePickerField, Dropdown } from './controls';
 import type { DropdownOption } from './controls';
 import {
   buildChart,
+  buildMonthComparison,
   buildReportMetrics,
+  buildYearComparison,
   getBounds,
   groupExpensesByDay,
 } from './reportUtils';
-import type { ChartDimension, ReportRange } from './reportUtils';
+import type { ChartDimension, MonthCompareItem, ReportRange, YearCompareItem } from './reportUtils';
 import { useTheme, useThemedStyles } from './theme';
 import type { ThemeColors } from './theme';
 import { getCategoryIcon, getSubcategoryIcon } from './components/categoryIcons';
@@ -31,6 +33,8 @@ const CHART_TABS: { label: string; value: ChartDimension }[] = [
   { label: 'Subcategory', value: 'subcategory' },
   { label: 'Member', value: 'member' },
   { label: 'Product', value: 'product' },
+  { label: 'Monthly', value: 'month-compare' },
+  { label: 'Yearly', value: 'year-compare' },
 ];
 const ALL_OPTION: DropdownOption<string> = { label: 'All', value: ALL };
 
@@ -119,6 +123,15 @@ export function ReportsScreen({
   );
   const chartMax = Math.max(1, ...chartData.map((item) => item.amount));
   const peakDayTotal = Math.max(1, metrics.peakDay?.total ?? 1);
+
+  const monthComparison = useMemo(
+    () => (dimension === 'month-compare' ? buildMonthComparison(expenses) : []),
+    [dimension, expenses]
+  );
+  const yearComparison = useMemo(
+    () => (dimension === 'year-compare' ? buildYearComparison(expenses) : []),
+    [dimension, expenses]
+  );
 
   const activeFilterCount =
     (category !== ALL ? 1 : 0) +
@@ -437,7 +450,11 @@ export function ReportsScreen({
           })}
         </ScrollView>
 
-        {chartData.length === 0 ? (
+        {dimension === 'month-compare' ? (
+          <MonthCompareSection items={monthComparison} currency={currency} />
+        ) : dimension === 'year-compare' ? (
+          <YearCompareSection items={yearComparison} currency={currency} />
+        ) : chartData.length === 0 ? (
           <View style={styles.empty}>
             <Text style={styles.emptyTitle}>No chart data in this selection</Text>
             <Text style={styles.emptyText}>Adjust your date range or filters to plot spending.</Text>
@@ -468,6 +485,294 @@ export function ReportsScreen({
         )}
       </View>
     </ScrollView>
+  );
+}
+
+// ─── Month Comparison Sub-Component ─────────────────────────────────────────
+
+function formatShortMoney(amount: number, currency: CurrencyCode): string {
+  const symbol = CURRENCY_SYMBOLS[currency];
+  if (amount >= 100_000) return `${symbol}${(amount / 100_000).toFixed(1)}L`;
+  if (amount >= 1000) return `${symbol}${(amount / 1000).toFixed(1)}k`;
+  return `${symbol}${Math.round(amount)}`;
+}
+
+function MonthCompareSection({
+  items,
+  currency,
+}: {
+  items: MonthCompareItem[];
+  currency: CurrencyCode;
+}) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(createStyles);
+  const [selectedIndex, setSelectedIndex] = useState<number>(Math.max(0, items.length - 1));
+
+  if (items.length === 0) {
+    return (
+      <View style={styles.empty}>
+        <Text style={styles.emptyTitle}>No monthly data yet</Text>
+        <Text style={styles.emptyText}>Add expenses to see month-over-month comparison.</Text>
+      </View>
+    );
+  }
+
+  const maxTotal = Math.max(1, ...items.map((m) => m.total));
+  const selected = items[Math.min(selectedIndex, items.length - 1)];
+  const isSelectedUp = selected.deltaVsPrev !== null && selected.deltaVsPrev > 0;
+  const isSelectedDown = selected.deltaVsPrev !== null && selected.deltaVsPrev < 0;
+
+  return (
+    <View style={styles.vChartWrap}>
+      <View style={styles.vCompareBanner}>
+        <View style={styles.flex}>
+          <Text style={styles.vCompareBannerTitle}>
+            {selected.label}
+            {selected.isCurrent ? ' (Current)' : ''}
+          </Text>
+          <Text style={styles.vCompareBannerSub}>
+            {formatMoney(selected.total, currency)} · {selected.count}{' '}
+            {selected.count === 1 ? 'entry' : 'entries'}
+          </Text>
+        </View>
+        {selected.deltaPercent !== null ? (
+          <View
+            style={[
+              styles.vDeltaPill,
+              isSelectedUp && { backgroundColor: colors.dangerLight },
+              isSelectedDown && { backgroundColor: colors.successLight },
+            ]}
+          >
+            <Text
+              style={[
+                styles.vDeltaPillText,
+                isSelectedUp && { color: colors.danger },
+                isSelectedDown && { color: colors.success },
+              ]}
+            >
+              {isSelectedUp ? '▲' : isSelectedDown ? '▼' : '—'} {Math.abs(selected.deltaPercent)}% vs prev
+            </Text>
+          </View>
+        ) : null}
+      </View>
+
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.vBarsRow}
+      >
+        {items.map((item, idx) => {
+          const isSelected = idx === Math.min(selectedIndex, items.length - 1);
+          const barHeight = item.total > 0 ? Math.max(10, (item.total / maxTotal) * 118) : 4;
+          const isUp = item.deltaVsPrev !== null && item.deltaVsPrev > 0;
+          const isDown = item.deltaVsPrev !== null && item.deltaVsPrev < 0;
+
+          return (
+            <Pressable
+              key={item.monthKey}
+              style={[styles.vBarCol, isSelected && styles.vBarColSelected]}
+              onPress={() => setSelectedIndex(idx)}
+            >
+              <Text style={styles.vBarValue} numberOfLines={1}>
+                {item.total > 0 ? formatShortMoney(item.total, currency) : '0'}
+              </Text>
+              <View style={styles.vBarTrack}>
+                <View
+                  style={[
+                    styles.vBarFill,
+                    {
+                      height: barHeight,
+                      backgroundColor: isSelected
+                        ? colors.primary
+                        : item.isCurrent
+                          ? colors.primaryMid
+                          : item.total > 0
+                            ? `${colors.primaryMid}99`
+                            : colors.track,
+                    },
+                  ]}
+                />
+              </View>
+              <Text
+                style={[
+                  styles.vBarLabel,
+                  (item.isCurrent || isSelected) && styles.vBarLabelActive,
+                ]}
+                numberOfLines={1}
+              >
+                {item.shortLabel}
+              </Text>
+              <Text
+                style={[
+                  styles.vBarDelta,
+                  isUp && { color: colors.danger },
+                  isDown && { color: colors.success },
+                ]}
+                numberOfLines={1}
+              >
+                {item.deltaPercent !== null
+                  ? `${isUp ? '▲' : isDown ? '▼' : ''}${Math.abs(item.deltaPercent)}%`
+                  : ' '}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+      <Text style={styles.vChartHint}>Tap any month bar to inspect details · Scroll for 12 months</Text>
+    </View>
+  );
+}
+
+// ─── Year Comparison Sub-Component ──────────────────────────────────────────
+
+function YearCompareSection({
+  items,
+  currency,
+}: {
+  items: YearCompareItem[];
+  currency: CurrencyCode;
+}) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(createStyles);
+  const [selectedYear, setSelectedYear] = useState<number | null>(
+    items.length > 0 ? items[items.length - 1].year : null
+  );
+
+  if (items.length === 0) {
+    return (
+      <View style={styles.empty}>
+        <Text style={styles.emptyTitle}>No yearly data yet</Text>
+        <Text style={styles.emptyText}>Add expenses to see year-over-year comparison.</Text>
+      </View>
+    );
+  }
+
+  const maxTotal = Math.max(1, ...items.map((y) => y.total));
+  const activeItem = items.find((y) => y.year === selectedYear) ?? items[items.length - 1];
+  const activeMonthMax = Math.max(1, ...activeItem.months.map((m) => m.total));
+  const isUp = activeItem.deltaVsPrev !== null && activeItem.deltaVsPrev > 0;
+  const isDown = activeItem.deltaVsPrev !== null && activeItem.deltaVsPrev < 0;
+
+  return (
+    <View style={styles.vChartWrap}>
+      <View style={styles.vCompareBanner}>
+        <View style={styles.flex}>
+          <Text style={styles.vCompareBannerTitle}>
+            Year {activeItem.year}
+            {activeItem.isCurrent ? ' (Current)' : ''}
+          </Text>
+          <Text style={styles.vCompareBannerSub}>
+            {formatMoney(activeItem.total, currency)} · avg {formatMoney(activeItem.monthlyAverage, currency)}/mo
+          </Text>
+        </View>
+        {activeItem.deltaPercent !== null ? (
+          <View
+            style={[
+              styles.vDeltaPill,
+              isUp && { backgroundColor: colors.dangerLight },
+              isDown && { backgroundColor: colors.successLight },
+            ]}
+          >
+            <Text
+              style={[
+                styles.vDeltaPillText,
+                isUp && { color: colors.danger },
+                isDown && { color: colors.success },
+              ]}
+            >
+              {isUp ? '▲' : isDown ? '▼' : '—'} {Math.abs(activeItem.deltaPercent)}% YoY
+            </Text>
+          </View>
+        ) : null}
+      </View>
+
+      <View style={styles.vYearBarsRow}>
+        {items.map((item) => {
+          const isSelected = item.year === activeItem.year;
+          const barHeight = item.total > 0 ? Math.max(12, (item.total / maxTotal) * 124) : 4;
+          const yearUp = item.deltaVsPrev !== null && item.deltaVsPrev > 0;
+          const yearDown = item.deltaVsPrev !== null && item.deltaVsPrev < 0;
+
+          return (
+            <Pressable
+              key={item.year}
+              style={[styles.vYearCol, isSelected && styles.vBarColSelected]}
+              onPress={() => setSelectedYear(item.year)}
+            >
+              <Text style={styles.vBarValue} numberOfLines={1}>
+                {formatShortMoney(item.total, currency)}
+              </Text>
+              <View style={styles.vBarTrack}>
+                <View
+                  style={[
+                    styles.vYearBarFill,
+                    {
+                      height: barHeight,
+                      backgroundColor: isSelected
+                        ? colors.primary
+                        : item.isCurrent
+                          ? colors.secondary
+                          : `${colors.secondary}99`,
+                    },
+                  ]}
+                />
+              </View>
+              <Text
+                style={[
+                  styles.vBarLabel,
+                  (item.isCurrent || isSelected) && styles.vBarLabelActive,
+                ]}
+              >
+                {item.year}
+              </Text>
+              <Text
+                style={[
+                  styles.vBarDelta,
+                  yearUp && { color: colors.danger },
+                  yearDown && { color: colors.success },
+                ]}
+              >
+                {item.deltaPercent !== null
+                  ? `${yearUp ? '▲' : yearDown ? '▼' : ''}${Math.abs(item.deltaPercent)}%`
+                  : `${item.count} entries`}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      <View style={styles.vYearSubWrap}>
+        <Text style={styles.vYearSubTitle}>{activeItem.year} month-by-month breakdown</Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.vSubBarsRow}
+        >
+          {activeItem.months.map((month) => {
+            const mh = month.total > 0 ? Math.max(6, (month.total / activeMonthMax) * 68) : 3;
+            return (
+              <View key={month.monthKey} style={styles.vSubBarCol}>
+                <Text style={styles.vSubBarValue} numberOfLines={1}>
+                  {month.total > 0 ? formatShortMoney(month.total, currency) : '—'}
+                </Text>
+                <View style={styles.vSubBarTrack}>
+                  <View
+                    style={[
+                      styles.vSubBarFill,
+                      {
+                        height: mh,
+                        backgroundColor: month.total > 0 ? colors.primaryMid : colors.track,
+                      },
+                    ]}
+                  />
+                </View>
+                <Text style={styles.vSubBarLabel}>{month.label}</Text>
+              </View>
+            );
+          })}
+        </ScrollView>
+      </View>
+    </View>
   );
 }
 
@@ -661,4 +966,212 @@ const createStyles = (colors: ThemeColors) =>
     empty: { paddingVertical: 24, alignItems: 'center' },
     emptyTitle: { color: colors.ink, fontWeight: '800', fontSize: 13, marginBottom: 5 },
     emptyText: { color: colors.muted, fontSize: 11, textAlign: 'center' },
+
+    vChartWrap: { marginTop: 14, gap: 12 },
+    vCompareBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: colors.surfaceTint,
+      borderRadius: 12,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      gap: 10,
+    },
+    vCompareBannerTitle: { color: colors.ink, fontSize: 13, fontWeight: '800' },
+    vCompareBannerSub: { color: colors.muted, fontSize: 11, fontWeight: '700', marginTop: 2 },
+    vDeltaPill: {
+      backgroundColor: colors.surface,
+      borderRadius: 9,
+      paddingHorizontal: 9,
+      paddingVertical: 5,
+    },
+    vDeltaPillText: { color: colors.muted, fontSize: 10, fontWeight: '800' },
+    vBarsRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      gap: 8,
+      paddingTop: 6,
+      paddingBottom: 4,
+    },
+    vBarCol: {
+      width: 52,
+      alignItems: 'center',
+      paddingVertical: 6,
+      paddingHorizontal: 4,
+      borderRadius: 12,
+      gap: 5,
+    },
+    vBarColSelected: {
+      backgroundColor: colors.primaryLight,
+    },
+    vBarValue: { color: colors.muted, fontSize: 9, fontWeight: '700' },
+    vBarTrack: {
+      height: 124,
+      justifyContent: 'flex-end',
+      alignItems: 'center',
+    },
+    vBarFill: {
+      width: 24,
+      borderRadius: 7,
+    },
+    vBarLabel: { color: colors.muted, fontSize: 10, fontWeight: '700' },
+    vBarLabelActive: { color: colors.primary, fontWeight: '800' },
+    vBarDelta: { color: colors.muted, fontSize: 9, fontWeight: '800' },
+    vChartHint: { color: colors.muted, fontSize: 10, textAlign: 'center' },
+
+    vYearBarsRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      justifyContent: 'space-around',
+      gap: 10,
+      paddingTop: 6,
+    },
+    vYearCol: {
+      flex: 1,
+      maxWidth: 96,
+      alignItems: 'center',
+      paddingVertical: 8,
+      paddingHorizontal: 6,
+      borderRadius: 14,
+      gap: 5,
+    },
+    vYearBarFill: {
+      width: 34,
+      borderRadius: 9,
+    },
+    vYearSubWrap: {
+      marginTop: 4,
+      paddingTop: 12,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      gap: 8,
+    },
+    vYearSubTitle: { color: colors.ink, fontSize: 11, fontWeight: '800' },
+    vSubBarsRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      gap: 6,
+      paddingBottom: 2,
+    },
+    vSubBarCol: {
+      width: 40,
+      alignItems: 'center',
+      gap: 4,
+    },
+    vSubBarValue: { color: colors.muted, fontSize: 8, fontWeight: '700' },
+    vSubBarTrack: {
+      height: 70,
+      justifyContent: 'flex-end',
+      alignItems: 'center',
+    },
+    vSubBarFill: {
+      width: 16,
+      borderRadius: 5,
+    },
+    vSubBarLabel: { color: colors.muted, fontSize: 9, fontWeight: '700' },
+
+    vChartWrap: { marginTop: 14, gap: 12 },
+    vCompareBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: colors.surfaceTint,
+      borderRadius: 12,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      gap: 10,
+    },
+    vCompareBannerTitle: { color: colors.ink, fontSize: 13, fontWeight: '800' },
+    vCompareBannerSub: { color: colors.muted, fontSize: 11, fontWeight: '700', marginTop: 2 },
+    vDeltaPill: {
+      backgroundColor: colors.surface,
+      borderRadius: 9,
+      paddingHorizontal: 9,
+      paddingVertical: 5,
+    },
+    vDeltaPillText: { color: colors.muted, fontSize: 10, fontWeight: '800' },
+    vBarsRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      gap: 8,
+      paddingTop: 6,
+      paddingBottom: 4,
+    },
+    vBarCol: {
+      width: 52,
+      alignItems: 'center',
+      paddingVertical: 6,
+      paddingHorizontal: 4,
+      borderRadius: 12,
+      gap: 5,
+    },
+    vBarColSelected: {
+      backgroundColor: colors.primaryLight,
+    },
+    vBarValue: { color: colors.muted, fontSize: 9, fontWeight: '700' },
+    vBarTrack: {
+      height: 124,
+      justifyContent: 'flex-end',
+      alignItems: 'center',
+    },
+    vBarFill: {
+      width: 24,
+      borderRadius: 7,
+    },
+    vBarLabel: { color: colors.muted, fontSize: 10, fontWeight: '700' },
+    vBarLabelActive: { color: colors.primary, fontWeight: '800' },
+    vBarDelta: { color: colors.muted, fontSize: 9, fontWeight: '800' },
+    vChartHint: { color: colors.muted, fontSize: 10, textAlign: 'center' },
+
+    vYearBarsRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      justifyContent: 'space-around',
+      gap: 10,
+      paddingTop: 6,
+    },
+    vYearCol: {
+      flex: 1,
+      maxWidth: 96,
+      alignItems: 'center',
+      paddingVertical: 8,
+      paddingHorizontal: 6,
+      borderRadius: 14,
+      gap: 5,
+    },
+    vYearBarFill: {
+      width: 34,
+      borderRadius: 9,
+    },
+    vYearSubWrap: {
+      marginTop: 4,
+      paddingTop: 12,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      gap: 8,
+    },
+    vYearSubTitle: { color: colors.ink, fontSize: 11, fontWeight: '800' },
+    vSubBarsRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      gap: 6,
+      paddingBottom: 2,
+    },
+    vSubBarCol: {
+      width: 40,
+      alignItems: 'center',
+      gap: 4,
+    },
+    vSubBarValue: { color: colors.muted, fontSize: 8, fontWeight: '700' },
+    vSubBarTrack: {
+      height: 70,
+      justifyContent: 'flex-end',
+      alignItems: 'center',
+    },
+    vSubBarFill: {
+      width: 16,
+      borderRadius: 5,
+    },
+    vSubBarLabel: { color: colors.muted, fontSize: 9, fontWeight: '700' },
   });

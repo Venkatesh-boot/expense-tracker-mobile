@@ -2,7 +2,7 @@ import { displayDate, formatMonthLabel, todayString } from './domain';
 import type { Expense, ExpenseCategory } from './domain';
 
 export type ReportRange = 'day' | 'week' | 'month' | 'year' | 'custom';
-export type ChartDimension = 'trend' | 'category' | 'subcategory' | 'product' | 'member';
+export type ChartDimension = 'trend' | 'category' | 'subcategory' | 'product' | 'member' | 'month-compare' | 'year-compare';
 
 export type ReportDayGroup = {
   date: string;
@@ -234,4 +234,157 @@ export function buildReportMetrics(
         }
       : null,
   };
+}
+
+// ─── Monthwise & Yearwise Comparison ────────────────────────────────────────
+
+export type MonthCompareItem = {
+  monthKey: string;
+  label: string;
+  shortLabel: string;
+  total: number;
+  count: number;
+  isCurrent: boolean;
+  deltaVsPrev: number | null;
+  deltaPercent: number | null;
+};
+
+export type YearCompareItem = {
+  year: number;
+  total: number;
+  count: number;
+  isCurrent: boolean;
+  monthlyAverage: number;
+  deltaVsPrev: number | null;
+  deltaPercent: number | null;
+  months: { monthKey: string; label: string; total: number }[];
+};
+
+/** Builds a month-over-month comparison for the last N months (default 12). */
+export function buildMonthComparison(
+  expenses: Expense[],
+  now = new Date(),
+  monthCount = 12
+): MonthCompareItem[] {
+  const totals = new Map<string, { total: number; count: number }>();
+  for (const expense of expenses) {
+    const key = expense.date.slice(0, 7);
+    const existing = totals.get(key);
+    if (existing) {
+      existing.total += expense.amount;
+      existing.count += 1;
+    } else {
+      totals.set(key, { total: expense.amount, count: 1 });
+    }
+  }
+
+  const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+  const result: MonthCompareItem[] = [];
+  let prevTotal: number | null = null;
+
+  for (let i = monthCount - 1; i >= 0; i -= 1) {
+    const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const monthKey = `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, '0')}`;
+    const entry = totals.get(monthKey);
+    const total = entry?.total ?? 0;
+    const count = entry?.count ?? 0;
+
+    const deltaVsPrev = prevTotal !== null ? total - prevTotal : null;
+    const deltaPercent =
+      prevTotal !== null && prevTotal > 0
+        ? Math.round(((total - prevTotal) / prevTotal) * 100)
+        : null;
+
+    result.push({
+      monthKey,
+      label: monthDate.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }),
+      shortLabel: monthDate.toLocaleDateString('en-GB', { month: 'short', year: '2-digit' }),
+      total,
+      count,
+      isCurrent: monthKey === currentMonthKey,
+      deltaVsPrev,
+      deltaPercent,
+    });
+
+    prevTotal = total;
+  }
+
+  return result;
+}
+
+/** Builds a year-over-year comparison with per-month breakdowns. */
+export function buildYearComparison(
+  expenses: Expense[],
+  now = new Date()
+): YearCompareItem[] {
+  const yearMonthTotals = new Map<number, Map<string, { total: number; count: number }>>();
+
+  for (const expense of expenses) {
+    const year = Number(expense.date.slice(0, 4));
+    const monthKey = expense.date.slice(0, 7);
+
+    if (!yearMonthTotals.has(year)) {
+      yearMonthTotals.set(year, new Map());
+    }
+    const monthMap = yearMonthTotals.get(year)!;
+    const existing = monthMap.get(monthKey);
+    if (existing) {
+      existing.total += expense.amount;
+      existing.count += 1;
+    } else {
+      monthMap.set(monthKey, { total: expense.amount, count: 1 });
+    }
+  }
+
+  const currentYear = now.getFullYear();
+  const years = [...yearMonthTotals.keys()].sort((a, b) => a - b);
+
+  if (years.length === 0) return [];
+
+  const result: YearCompareItem[] = [];
+  let prevTotal: number | null = null;
+
+  for (const year of years) {
+    const monthMap = yearMonthTotals.get(year)!;
+    let yearTotal = 0;
+    let yearCount = 0;
+    const months: YearCompareItem['months'] = [];
+
+    for (let m = 0; m < 12; m += 1) {
+      const mk = `${year}-${String(m + 1).padStart(2, '0')}`;
+      const entry = monthMap.get(mk);
+      const monthDate = new Date(year, m, 1);
+      yearTotal += entry?.total ?? 0;
+      yearCount += entry?.count ?? 0;
+      months.push({
+        monthKey: mk,
+        label: monthDate.toLocaleDateString('en-GB', { month: 'short' }),
+        total: entry?.total ?? 0,
+      });
+    }
+
+    const activeMonthCount = months.filter((m) => m.total > 0).length;
+
+    const deltaVsPrev = prevTotal !== null ? yearTotal - prevTotal : null;
+    const deltaPercent =
+      prevTotal !== null && prevTotal > 0
+        ? Math.round(((yearTotal - prevTotal) / prevTotal) * 100)
+        : null;
+
+    result.push({
+      year,
+      total: yearTotal,
+      count: yearCount,
+      isCurrent: year === currentYear,
+      monthlyAverage: activeMonthCount > 0 ? yearTotal / activeMonthCount : 0,
+      deltaVsPrev,
+      deltaPercent,
+      months,
+    });
+
+    prevTotal = yearTotal;
+  }
+
+  return result;
 }
